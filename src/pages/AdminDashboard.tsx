@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { 
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3, 
-  Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle
+  Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
+  Trash2, ArrowLeft, UserCheck, RefreshCw
 } from "lucide-react";
 
 interface Member {
@@ -49,6 +50,9 @@ export default function AdminDashboard() {
   const [newMemberPin, setNewMemberPin] = useState("");
   const [newTask, setNewTask] = useState({ title: "", description: "", points: 10, deadline: "", assigned_to: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [reassignTaskId, setReassignTaskId] = useState<string | null>(null);
+  const [reassignTo, setReassignTo] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) {
@@ -97,6 +101,39 @@ export default function AdminDashboard() {
     }
   };
 
+  const deleteMember = async (memberId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا العضو؟ سيتم حذف جميع بياناته.")) return;
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "delete", member_id: memberId },
+      });
+      if (error || data?.error) throw new Error(data?.error || "فشل حذف العضو");
+      toast({ title: "تم حذف العضو بنجاح" });
+      setSelectedMember(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      if (error) throw error;
+      toast({ title: "تم حذف المهمة بنجاح" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const addTask = async () => {
     if (!newTask.title || !newTask.deadline || !newTask.assigned_to) {
       toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
@@ -114,7 +151,6 @@ export default function AdminDashboard() {
       });
       if (error) throw error;
 
-      // Create notification
       await supabase.from("notifications").insert({
         user_id: newTask.assigned_to,
         title: "مهمة جديدة",
@@ -132,12 +168,70 @@ export default function AdminDashboard() {
     }
   };
 
+  // Admin decides to deduct points for a failed task
+  const deductPoints = async (task: Task) => {
+    if (!confirm(`هل تريد خصم ${task.points} نقطة من العضو؟`)) return;
+    setSubmitting(true);
+    try {
+      const penalty = -task.points;
+      await supabase.from("tasks").update({
+        status: "deducted" as any,
+        points_awarded: penalty,
+        updated_at: new Date().toISOString(),
+      }).eq("id", task.id);
+
+      const member = members.find(m => m.id === task.assigned_to);
+      if (member) {
+        await supabase.from("profiles").update({
+          total_points: (member.total_points || 0) + penalty,
+        }).eq("id", member.id);
+      }
+
+      toast({ title: "تم خصم النقاط" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Admin reassigns a failed task to another member
+  const reassignTask = async (taskId: string, newAssignee: string) => {
+    setSubmitting(true);
+    try {
+      await supabase.from("tasks").update({
+        assigned_to: newAssignee,
+        status: "pending",
+        failure_reason: null,
+        points_awarded: 0,
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+
+      await supabase.from("notifications").insert({
+        user_id: newAssignee,
+        title: "مهمة محولة إليك",
+        message: `تم تحويل مهمة إليك`,
+      });
+
+      toast({ title: "تم تحويل المهمة بنجاح" });
+      setReassignTaskId(null);
+      setReassignTo("");
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const todayTasks = tasks.filter(t => {
     const today = new Date().toDateString();
     return new Date(t.created_at).toDateString() === today;
   });
   const completedTasks = tasks.filter(t => t.status === "completed");
   const pendingTasks = tasks.filter(t => t.status === "pending");
+  const failedTasks = tasks.filter(t => t.status === "failed");
   const overdueTasks = tasks.filter(t => t.status === "pending" && new Date(t.deadline) < new Date());
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
 
@@ -159,6 +253,130 @@ export default function AdminDashboard() {
   ];
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-xl">جاري التحميل...</div></div>;
+
+  // Member detail view
+  if (selectedMember) {
+    const mTasks = tasks.filter(t => t.assigned_to === selectedMember.id);
+    const mCompleted = mTasks.filter(t => t.status === "completed");
+    const mFailed = mTasks.filter(t => t.status === "failed" || t.status === "deducted");
+    const mPending = mTasks.filter(t => t.status === "pending");
+    const mRate = mTasks.length > 0 ? Math.round((mCompleted.length / mTasks.length) * 100) : 0;
+    const totalAwarded = mTasks.reduce((s, t) => s + (t.points_awarded || 0), 0);
+
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
+            <Button variant="ghost" onClick={() => setSelectedMember(null)}>
+              <ArrowLeft className="h-5 w-5 ml-1" /> رجوع
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => deleteMember(selectedMember.id)} disabled={submitting}>
+              <Trash2 className="h-4 w-4 ml-1" /> حذف العضو
+            </Button>
+          </div>
+        </header>
+
+        <main className="p-4 max-w-3xl mx-auto space-y-6">
+          {/* Profile header */}
+          <Card>
+            <CardContent className="p-6 text-center space-y-3">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-3xl mx-auto">
+                {selectedMember.name.charAt(0)}
+              </div>
+              <h2 className="text-2xl font-bold">{selectedMember.name}</h2>
+              <div className="flex justify-center gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{selectedMember.total_points || 0}</p>
+                  <p className="text-xs text-muted-foreground">نقطة</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-[hsl(var(--success))]">{mCompleted.length}</p>
+                  <p className="text-xs text-muted-foreground">مكتملة</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-destructive">{mFailed.length}</p>
+                  <p className="text-xs text-muted-foreground">لم تنفذ</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-[hsl(var(--warning))]">{mPending.length}</p>
+                  <p className="text-xs text-muted-foreground">قيد التنفيذ</p>
+                </div>
+              </div>
+              <Progress value={mRate} className="h-3" />
+              <p className="text-sm text-muted-foreground">نسبة الإنجاز: {mRate}%</p>
+            </CardContent>
+          </Card>
+
+          {/* Pending tasks */}
+          {mPending.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold mb-3">المهام الحالية</h3>
+              <div className="space-y-2">
+                {mPending.map(t => (
+                  <Card key={t.id} className={new Date(t.deadline) < new Date() ? "border-destructive/50" : ""}>
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{t.title}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(t.deadline).toLocaleString("ar-SA")}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-primary/10 text-primary">{t.points} نقطة</Badge>
+                        <Button variant="ghost" size="icon" onClick={() => deleteTask(t.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed */}
+          {mCompleted.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold mb-3">المهام المكتملة</h3>
+              <div className="space-y-2">
+                {mCompleted.map(t => (
+                  <Card key={t.id} className="bg-[hsl(var(--success))]/5">
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{t.title}</p>
+                        <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA")}</p>
+                      </div>
+                      <Badge className={t.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
+                        {t.points_awarded > 0 ? "+" : ""}{t.points_awarded} نقطة
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Failed */}
+          {mFailed.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold mb-3">المهام غير المنجزة</h3>
+              <div className="space-y-2">
+                {mFailed.map(t => (
+                  <Card key={t.id} className="border-destructive/30">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{t.title}</p>
+                        <Badge variant="destructive">{t.status === "deducted" ? `خُصم ${Math.abs(t.points_awarded)}` : "بانتظار القرار"}</Badge>
+                      </div>
+                      {t.failure_reason && <p className="text-sm text-destructive mt-1">{t.failure_reason}</p>}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -207,6 +425,37 @@ export default function AdminDashboard() {
               <Card><CardContent className="p-4 text-center"><p className="text-3xl font-bold text-destructive">{overdueTasks.length}</p><p className="text-sm text-muted-foreground">متأخرة</p></CardContent></Card>
             </div>
 
+            {/* Failed tasks needing admin action */}
+            {failedTasks.length > 0 && (
+              <Card className="border-destructive/50">
+                <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" /> مهام بانتظار قرارك ({failedTasks.length})</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {failedTasks.map(task => {
+                    const assignee = members.find(m => m.id === task.assigned_to);
+                    return (
+                      <div key={task.id} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-bold">{task.title}</p>
+                            <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                            {task.failure_reason && <p className="text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>
+                            <XCircle className="h-4 w-4" /> خصم النقاط
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                            <RefreshCw className="h-4 w-4" /> تحويل لآخر
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader><CardTitle>نسبة الإنجاز الكلية</CardTitle></CardHeader>
               <CardContent>
@@ -215,7 +464,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Quick leaderboard */}
             {sortedMembers.length > 0 && (
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> لوحة المتصدرين</CardTitle></CardHeader>
@@ -262,7 +510,7 @@ export default function AdminDashboard() {
                 const memberCompleted = memberTasks.filter(t => t.status === "completed").length;
                 const memberRate = memberTasks.length > 0 ? Math.round((memberCompleted / memberTasks.length) * 100) : 0;
                 return (
-                  <Card key={m.id}>
+                  <Card key={m.id} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setSelectedMember(m)}>
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
@@ -272,6 +520,9 @@ export default function AdminDashboard() {
                           <h3 className="font-bold">{m.name}</h3>
                           <p className="text-sm text-muted-foreground">{m.total_points || 0} نقطة</p>
                         </div>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMember(m.id); }}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                       <div>
                         <div className="flex justify-between text-sm mb-1">
@@ -306,7 +557,10 @@ export default function AdminDashboard() {
                     <Input placeholder="عنوان المهمة" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} />
                     <Textarea placeholder="وصف المهمة (اختياري)" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
                     <Input type="number" placeholder="عدد النقاط" value={newTask.points} onChange={(e) => setNewTask({ ...newTask, points: parseInt(e.target.value) || 10 })} dir="ltr" />
-                    <Input type="datetime-local" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} dir="ltr" />
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">الموعد النهائي (الوقت المحدد للنقاط الكاملة)</label>
+                      <Input type="datetime-local" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} dir="ltr" />
+                    </div>
                     <select
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       value={newTask.assigned_to}
@@ -330,13 +584,15 @@ export default function AdminDashboard() {
                 const assignee = members.find(m => m.id === task.assigned_to);
                 const isOverdue = task.status === "pending" && new Date(task.deadline) < new Date();
                 return (
-                  <Card key={task.id} className={isOverdue ? "border-destructive/50" : ""}>
+                  <Card key={task.id} className={isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             {task.status === "completed" ? (
                               <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
+                            ) : task.status === "failed" ? (
+                              <AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" />
                             ) : isOverdue ? (
                               <AlertTriangle className="h-5 w-5 text-destructive" />
                             ) : (
@@ -349,17 +605,34 @@ export default function AdminDashboard() {
                             <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA")}</Badge>
                             {assignee && <Badge variant="secondary">{assignee.name}</Badge>}
                             <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
-                            {task.points_awarded > 0 && <Badge className="bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]">+{task.points_awarded}</Badge>}
+                            {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
                           </div>
                           {task.failure_reason && (
                             <p className="text-sm text-destructive mt-2 flex items-center gap-1">
                               <XCircle className="h-4 w-4" /> {task.failure_reason}
                             </p>
                           )}
+
+                          {/* Admin actions for failed tasks */}
+                          {task.status === "failed" && (
+                            <div className="flex gap-2 mt-3">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>
+                                خصم النقاط
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                                تحويل لآخر
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        <Badge variant={task.status === "completed" ? "default" : isOverdue ? "destructive" : "secondary"}>
-                          {task.status === "completed" ? "مكتملة" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={task.status === "completed" ? "default" : task.status === "failed" ? "secondary" : isOverdue ? "destructive" : "secondary"}>
+                            {task.status === "completed" ? "مكتملة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
+                          </Badge>
+                          <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -419,7 +692,6 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Per-member comparison */}
             <Card>
               <CardHeader><CardTitle>مقارنة الأعضاء</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -428,7 +700,7 @@ export default function AdminDashboard() {
                   const mCompleted = mTasks.filter(t => t.status === "completed").length;
                   const mRate = mTasks.length > 0 ? Math.round((mCompleted / mTasks.length) * 100) : 0;
                   return (
-                    <div key={m.id} className="space-y-1">
+                    <div key={m.id} className="space-y-1 cursor-pointer hover:bg-secondary/30 p-2 rounded-lg" onClick={() => { setSelectedMember(m); }}>
                       <div className="flex justify-between text-sm">
                         <span className="font-medium">{m.name}</span>
                         <span>{mRate}% ({mCompleted}/{mTasks.length})</span>
@@ -440,7 +712,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Incomplete tasks with reasons */}
             <Card>
               <CardHeader><CardTitle>المهام غير المنجزة وأسبابها</CardTitle></CardHeader>
               <CardContent>
@@ -469,6 +740,28 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Reassign dialog */}
+      <Dialog open={!!reassignTaskId} onOpenChange={() => setReassignTaskId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تحويل المهمة لعضو آخر</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <select
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={reassignTo}
+              onChange={(e) => setReassignTo(e.target.value)}
+            >
+              <option value="">اختر العضو</option>
+              {members.filter(m => m.id !== tasks.find(t => t.id === reassignTaskId)?.assigned_to).map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <Button onClick={() => reassignTaskId && reassignTo && reassignTask(reassignTaskId, reassignTo)} disabled={!reassignTo || submitting} className="w-full">
+              {submitting ? "جاري التحويل..." : "تحويل المهمة"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

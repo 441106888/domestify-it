@@ -24,6 +24,7 @@ interface Task {
   completed_at: string | null;
   failure_reason: string | null;
   points_awarded: number;
+  created_at: string;
 }
 
 interface Notification {
@@ -54,7 +55,6 @@ export default function MemberDashboard() {
   useEffect(() => {
     if (user && role === "member") {
       loadData();
-      // Subscribe to realtime task updates
       const channel = supabase
         .channel("member-tasks")
         .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter: `assigned_to=eq.${user.id}` }, () => loadData())
@@ -72,7 +72,6 @@ export default function MemberDashboard() {
     const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     setNotifications((notifData || []) as Notification[]);
 
-    // Load leaderboard
     const { data: profiles } = await supabase.from("profiles").select("id, name, total_points");
     const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "member");
     const memberIds = roles?.map(r => r.user_id) || [];
@@ -88,17 +87,27 @@ export default function MemberDashboard() {
 
       const now = new Date();
       const deadline = new Date(task.deadline);
-      const nextDayNoon = new Date(deadline);
-      nextDayNoon.setDate(nextDayNoon.getDate() + 1);
-      nextDayNoon.setHours(12, 0, 0, 0);
+      
+      // Calculate the final cutoff: midnight of the deadline day
+      // If deadline is multi-day (more than same day from creation), use midnight after deadline day
+      const taskCreated = new Date(task.created_at);
+      const isSameDay = taskCreated.toDateString() === deadline.toDateString();
+      
+      // Final cutoff is midnight (00:00) of the day after deadline
+      const finalCutoff = new Date(deadline);
+      finalCutoff.setDate(finalCutoff.getDate() + 1);
+      finalCutoff.setHours(0, 0, 0, 0);
 
       let pointsAwarded = 0;
       if (now <= deadline) {
-        pointsAwarded = task.points; // Full points
-      } else if (now <= nextDayNoon) {
-        pointsAwarded = Math.floor(task.points / 2); // Half points
+        // Completed within the specified time → full points
+        pointsAwarded = task.points;
+      } else if (now < finalCutoff) {
+        // After deadline but before midnight → half points
+        pointsAwarded = Math.floor(task.points / 2);
       } else {
-        pointsAwarded = -task.points; // Penalty
+        // After midnight → half points deducted (still completing late)
+        pointsAwarded = Math.floor(task.points / 2);
       }
 
       const { error } = await supabase.from("tasks").update({
@@ -110,17 +119,14 @@ export default function MemberDashboard() {
 
       if (error) throw error;
 
-      // Update total points
       await supabase.from("profiles").update({
         total_points: (profile?.total_points || 0) + pointsAwarded,
         updated_at: now.toISOString(),
       }).eq("id", user!.id);
 
       toast({
-        title: pointsAwarded > 0 ? "أحسنت! 🎉" : "تم التسجيل",
-        description: pointsAwarded > 0
-          ? `حصلت على ${pointsAwarded} نقطة`
-          : `تم خصم ${Math.abs(pointsAwarded)} نقطة (تأخر في التنفيذ)`,
+        title: "أحسنت! 🎉",
+        description: `حصلت على ${pointsAwarded} نقطة${pointsAwarded < task.points ? " (تأخر في التنفيذ - نصف النقاط)" : ""}`,
       });
       loadData();
     } catch (error: any) {
@@ -134,21 +140,15 @@ export default function MemberDashboard() {
     if (!failureTaskId || !failureReason) return;
     setSubmitting(true);
     try {
-      const task = tasks.find(t => t.id === failureTaskId);
-      const pointsPenalty = task ? -task.points : 0;
-
+      // Don't deduct points - send to admin for review
       await supabase.from("tasks").update({
         status: "failed" as any,
         failure_reason: failureReason,
-        points_awarded: pointsPenalty,
+        points_awarded: 0,
         updated_at: new Date().toISOString(),
       }).eq("id", failureTaskId);
 
-      await supabase.from("profiles").update({
-        total_points: (profile?.total_points || 0) + pointsPenalty,
-      }).eq("id", user!.id);
-
-      toast({ title: "تم تسجيل السبب", description: `تم خصم ${Math.abs(pointsPenalty)} نقطة` });
+      toast({ title: "تم إرسال السبب للأدمن", description: "سيقوم الأدمن بمراجعة طلبك واتخاذ القرار" });
       setFailureTaskId(null);
       setFailureReason("");
       loadData();
@@ -161,6 +161,7 @@ export default function MemberDashboard() {
 
   const pendingTasks = tasks.filter(t => t.status === "pending");
   const completedTasks = tasks.filter(t => t.status === "completed");
+  const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
   const myRank = leaderboard.findIndex(m => m.id === user?.id) + 1;
@@ -185,7 +186,6 @@ export default function MemberDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3 max-w-3xl mx-auto">
           <div>
@@ -206,7 +206,6 @@ export default function MemberDashboard() {
       </header>
 
       <main className="p-4 max-w-3xl mx-auto space-y-6">
-        {/* Progress */}
         <Card>
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-2">
@@ -236,7 +235,7 @@ export default function MemberDashboard() {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       {isOverdue ? (
-                        <Badge variant="destructive" className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> انتهى الوقت</Badge>
+                        <Badge variant="destructive" className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> انتهى الوقت (نصف النقاط)</Badge>
                       ) : (
                         <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> {getTimeRemaining(task.deadline)}</Badge>
                       )}
@@ -256,6 +255,24 @@ export default function MemberDashboard() {
             {pendingTasks.length === 0 && <p className="text-center text-muted-foreground py-6">🎉 لا توجد مهام معلقة!</p>}
           </div>
         </div>
+
+        {/* Failed tasks awaiting admin */}
+        {failedTasks.length > 0 && (
+          <div>
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" /> بانتظار قرار الأدمن ({failedTasks.length})</h2>
+            <div className="space-y-2">
+              {failedTasks.map((task) => (
+                <Card key={task.id} className="border-[hsl(var(--warning))]/30">
+                  <CardContent className="p-3">
+                    <h3 className="font-medium">{task.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">السبب: {task.failure_reason}</p>
+                    <Badge variant="secondary" className="mt-2">بانتظار المراجعة</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Completed tasks */}
         {completedTasks.length > 0 && (
@@ -299,9 +316,10 @@ export default function MemberDashboard() {
         <DialogContent>
           <DialogHeader><DialogTitle>سبب عدم التنفيذ</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">سيتم إرسال السبب للأدمن لمراجعته واتخاذ القرار المناسب.</p>
             <Textarea placeholder="اكتب سبب عدم تمكنك من تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} />
             <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full">
-              {submitting ? "جاري الإرسال..." : "إرسال"}
+              {submitting ? "جاري الإرسال..." : "إرسال للأدمن"}
             </Button>
           </div>
         </DialogContent>
