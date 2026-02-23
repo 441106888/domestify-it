@@ -119,10 +119,7 @@ export default function MemberDashboard() {
 
       if (error) throw error;
 
-      await supabase.from("profiles").update({
-        total_points: (profile?.total_points || 0) + pointsAwarded,
-        updated_at: now.toISOString(),
-      }).eq("id", user!.id);
+      await supabase.rpc("increment_points", { _user_id: user!.id, _amount: pointsAwarded });
 
       toast({
         title: "أحسنت! 🎉",
