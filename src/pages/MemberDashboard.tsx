@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,14 @@ interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0, scale: 1,
+    transition: { delay: i * 0.07, type: "spring" as const, stiffness: 300, damping: 24 }
+  }),
+};
 
 export default function MemberDashboard() {
   const { user, role, profile, loading, signOut } = useAuth();
@@ -88,25 +97,16 @@ export default function MemberDashboard() {
       const now = new Date();
       const deadline = new Date(task.deadline);
       
-      // Calculate the final cutoff: midnight of the deadline day
-      // If deadline is multi-day (more than same day from creation), use midnight after deadline day
-      const taskCreated = new Date(task.created_at);
-      const isSameDay = taskCreated.toDateString() === deadline.toDateString();
-      
-      // Final cutoff is midnight (00:00) of the day after deadline
       const finalCutoff = new Date(deadline);
       finalCutoff.setDate(finalCutoff.getDate() + 1);
       finalCutoff.setHours(0, 0, 0, 0);
 
       let pointsAwarded = 0;
       if (now <= deadline) {
-        // Completed within the specified time → full points
         pointsAwarded = task.points;
       } else if (now < finalCutoff) {
-        // After deadline but before midnight → half points
         pointsAwarded = Math.floor(task.points / 2);
       } else {
-        // After midnight → half points deducted (still completing late)
         pointsAwarded = Math.floor(task.points / 2);
       }
 
@@ -137,7 +137,6 @@ export default function MemberDashboard() {
     if (!failureTaskId || !failureReason) return;
     setSubmitting(true);
     try {
-      // Don't deduct points - send to admin for review
       await supabase.from("tasks").update({
         status: "failed" as any,
         failure_reason: failureReason,
@@ -179,133 +178,234 @@ export default function MemberDashboard() {
     return null;
   };
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-xl">جاري التحميل...</div></div>;
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
+        className="text-xl"
+      >
+        جاري التحميل...
+      </motion.div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+      <motion.header
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm"
+      >
         <div className="flex items-center justify-between px-4 py-3 max-w-3xl mx-auto">
           <div>
             <h1 className="text-xl font-bold">مرحباً، {profile?.name} 👋</h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Star className="h-4 w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة</span>
+              <motion.span
+                className="flex items-center gap-1"
+                key={profile?.total_points}
+                initial={{ scale: 1.3, color: "hsl(var(--gold))" }}
+                animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}
+                transition={{ duration: 0.5 }}
+              >
+                <Star className="h-4 w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
+              </motion.span>
               {myRank > 0 && <span>المركز #{myRank}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              {unreadNotifs > 0 && <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">{unreadNotifs}</span>}
+              <AnimatePresence>
+                {unreadNotifs > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                  >
+                    {unreadNotifs}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </Button>
             <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       <main className="p-4 max-w-3xl mx-auto space-y-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-medium">نسبة الإنجاز</span>
-              <span className="text-primary font-bold">{completionRate}%</span>
-            </div>
-            <Progress value={completionRate} className="h-3" />
-            <p className="text-xs text-muted-foreground mt-2">{completedTasks.length} من {tasks.length} مهام مكتملة</p>
-          </CardContent>
-        </Card>
+        {/* Progress card */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium">نسبة الإنجاز</span>
+                <motion.span
+                  key={completionRate}
+                  initial={{ scale: 1.5 }}
+                  animate={{ scale: 1 }}
+                  className="text-primary font-bold"
+                >
+                  {completionRate}%
+                </motion.span>
+              </div>
+              <Progress value={completionRate} className="h-3" />
+              <p className="text-xs text-muted-foreground mt-2">{completedTasks.length} من {tasks.length} مهام مكتملة</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Pending tasks */}
-        <div>
-          <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><Clock className="h-5 w-5 text-[hsl(var(--warning))]" /> المهام المطلوبة ({pendingTasks.length})</h2>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-[hsl(var(--warning))]" /> المهام المطلوبة ({pendingTasks.length})
+          </h2>
           <div className="space-y-3">
-            {pendingTasks.map((task) => {
-              const isOverdue = new Date(task.deadline) < new Date();
-              return (
-                <Card key={task.id} className={isOverdue ? "border-destructive/50" : "border-primary/20"}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold">{task.title}</h3>
-                        {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
-                      </div>
-                      <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      {isOverdue ? (
-                        <Badge variant="destructive" className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> انتهى الوقت (نصف النقاط)</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> {getTimeRemaining(task.deadline)}</Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1" onClick={() => completeTask(task.id)} disabled={submitting}>
-                        <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setFailureTaskId(task.id)}>
-                        <XCircle className="h-4 w-4" /> لم أتمكن
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {pendingTasks.length === 0 && <p className="text-center text-muted-foreground py-6">🎉 لا توجد مهام معلقة!</p>}
+            <AnimatePresence>
+              {pendingTasks.map((task, i) => {
+                const isOverdue = new Date(task.deadline) < new Date();
+                return (
+                  <motion.div
+                    key={task.id}
+                    custom={i}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit={{ opacity: 0, x: -100, transition: { duration: 0.3 } }}
+                    layout
+                  >
+                    <Card className={isOverdue ? "border-destructive/50" : "border-primary/20"}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-bold">{task.title}</h3>
+                            {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+                          </div>
+                          <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          {isOverdue ? (
+                            <motion.div initial={{ scale: 0.8 }} animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2 }}>
+                              <Badge variant="destructive" className="flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" /> انتهى الوقت (نصف النقاط)
+                              </Badge>
+                            </motion.div>
+                          ) : (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {getTimeRemaining(task.deadline)}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
+                            <Button size="sm" className="w-full" onClick={() => completeTask(task.id)} disabled={submitting}>
+                              <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
+                            </Button>
+                          </motion.div>
+                          <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
+                            <Button size="sm" variant="outline" className="w-full" onClick={() => setFailureTaskId(task.id)}>
+                              <XCircle className="h-4 w-4" /> لم أتمكن
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            {pendingTasks.length === 0 && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-muted-foreground py-6"
+              >
+                🎉 لا توجد مهام معلقة!
+              </motion.p>
+            )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Failed tasks awaiting admin */}
-        {failedTasks.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" /> بانتظار قرار الأدمن ({failedTasks.length})</h2>
-            <div className="space-y-2">
-              {failedTasks.map((task) => (
-                <Card key={task.id} className="border-[hsl(var(--warning))]/30">
-                  <CardContent className="p-3">
-                    <h3 className="font-medium">{task.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">السبب: {task.failure_reason}</p>
-                    <Badge variant="secondary" className="mt-2">بانتظار المراجعة</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {failedTasks.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" /> بانتظار قرار الأدمن ({failedTasks.length})
+              </h2>
+              <div className="space-y-2">
+                {failedTasks.map((task, i) => (
+                  <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
+                    <Card className="border-[hsl(var(--warning))]/30">
+                      <CardContent className="p-3">
+                        <h3 className="font-medium">{task.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">السبب: {task.failure_reason}</p>
+                        <Badge variant="secondary" className="mt-2">بانتظار المراجعة</Badge>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Completed tasks */}
-        {completedTasks.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" /> المهام المكتملة ({completedTasks.length})</h2>
-            <div className="space-y-2">
-              {completedTasks.map((task) => (
-                <Card key={task.id} className="bg-[hsl(var(--success))]/5">
-                  <CardContent className="p-3 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{task.title}</h3>
-                      <p className="text-xs text-muted-foreground">{task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA")}</p>
-                    </div>
-                    <Badge className={task.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
-                      {task.points_awarded > 0 ? "+" : ""}{task.points_awarded} نقطة
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {completedTasks.length > 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" /> المهام المكتملة ({completedTasks.length})
+              </h2>
+              <div className="space-y-2">
+                {completedTasks.map((task, i) => (
+                  <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
+                    <Card className="bg-[hsl(var(--success))]/5">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">{task.title}</h3>
+                          <p className="text-xs text-muted-foreground">{task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA")}</p>
+                        </div>
+                        <Badge className={task.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
+                          {task.points_awarded > 0 ? "+" : ""}{task.points_awarded} نقطة
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mini leaderboard */}
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> الترتيب</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {leaderboard.slice(0, 5).map((m, i) => (
-              <div key={m.id} className={`flex items-center gap-3 p-2 rounded-lg ${m.id === user?.id ? "bg-primary/10" : "bg-secondary/30"}`}>
-                <span className="w-6 text-center">{getRankIcon(i) || <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}</span>
-                <span className={`flex-1 ${m.id === user?.id ? "font-bold" : ""}`}>{m.name} {m.id === user?.id ? "(أنت)" : ""}</span>
-                <Badge variant="secondary">{m.total_points || 0}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> الترتيب
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {leaderboard.slice(0, 5).map((m, i) => (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 + i * 0.08 }}
+                  className={`flex items-center gap-3 p-2 rounded-lg ${m.id === user?.id ? "bg-primary/10" : "bg-secondary/30"}`}
+                >
+                  <span className="w-6 text-center">{getRankIcon(i) || <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}</span>
+                  <span className={`flex-1 ${m.id === user?.id ? "font-bold" : ""}`}>{m.name} {m.id === user?.id ? "(أنت)" : ""}</span>
+                  <Badge variant="secondary">{m.total_points || 0}</Badge>
+                </motion.div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
       </main>
 
       {/* Failure reason dialog */}
