@@ -180,12 +180,7 @@ export default function AdminDashboard() {
         updated_at: new Date().toISOString(),
       }).eq("id", task.id);
 
-      const member = members.find(m => m.id === task.assigned_to);
-      if (member) {
-        await supabase.from("profiles").update({
-          total_points: (member.total_points || 0) + penalty,
-        }).eq("id", member.id);
-      }
+      await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: penalty });
 
       toast({ title: "تم خصم النقاط" });
       loadData();
