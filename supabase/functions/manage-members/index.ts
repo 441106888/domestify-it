@@ -16,11 +16,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "غير مصرح" }), {
         status: 401,
@@ -45,20 +44,17 @@ Deno.serve(async (req) => {
     const { action, ...body } = await req.json();
 
     if (action === "create") {
-      const { name, pin } = body;
-      if (!name || !pin) {
-        return new Response(JSON.stringify({ error: "الاسم والرمز مطلوبان" }), {
+      const { name, email, password } = body;
+      if (!name || !email || !password) {
+        return new Response(JSON.stringify({ error: "الاسم والبريد الإلكتروني وكلمة المرور مطلوبة" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const generatedEmail = `member_${crypto.randomUUID().slice(0, 8)}@tasks.local`;
-
-      // Create auth user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: generatedEmail,
-        password: pin,
+        email,
+        password,
         email_confirm: true,
         user_metadata: { name },
       });
@@ -70,14 +66,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Create member record
       await supabaseAdmin.from("members").insert({
         id: newUser.user.id,
-        pin_code: pin,
+        pin_code: "deprecated",
         created_by: user.id,
       });
 
-      // Assign member role
       await supabaseAdmin.from("user_roles").insert({
         user_id: newUser.user.id,
         role: "member",
@@ -97,12 +91,19 @@ Deno.serve(async (req) => {
     }
 
     if (action === "list") {
+      const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "member");
+      const memberIds = roles?.map((r: any) => r.user_id) || [];
+      
+      if (memberIds.length === 0) {
+        return new Response(JSON.stringify({ members: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: members } = await supabaseAdmin
         .from("profiles")
         .select("id, name, avatar_url, total_points")
-        .in("id", (
-          await supabaseAdmin.from("user_roles").select("user_id").eq("role", "member")
-        ).data?.map((r: any) => r.user_id) || []);
+        .in("id", memberIds);
 
       return new Response(JSON.stringify({ members: members || [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
