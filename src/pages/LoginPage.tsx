@@ -6,13 +6,12 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Sparkles, UserPlus } from "lucide-react";
+import { LogIn, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
@@ -28,20 +27,8 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { name: email.split("@")[0] } }
-        });
-        if (error) throw error;
-        if (data.user) {
-          await supabase.from("user_roles").insert({ user_id: data.user.id, role: "admin" as any });
-          toast({ title: "تم إنشاء حساب الأدمن بنجاح ✅" });
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally {
@@ -104,8 +91,8 @@ export default function LoginPage() {
           <Card className="overflow-hidden">
             <CardHeader className="bg-primary/5">
               <CardTitle className="flex items-center gap-2">
-                {isSignUp ? <UserPlus className="h-5 w-5 text-primary" /> : <LogIn className="h-5 w-5 text-primary" />}
-                {isSignUp ? "إنشاء حساب أدمن جديد" : "تسجيل الدخول"}
+                <LogIn className="h-5 w-5 text-primary" />
+                تسجيل الدخول
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
@@ -119,14 +106,9 @@ export default function LoginPage() {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                   <Button type="submit" className="w-full" disabled={submitting}>
                     <LogIn className="h-4 w-4" />
-                    {submitting ? "جاري..." : isSignUp ? "إنشاء الحساب" : "تسجيل الدخول"}
+                    {submitting ? "جاري..." : "تسجيل الدخول"}
                   </Button>
                 </motion.div>
-                <div className="text-center">
-                  <button type="button" className="text-sm text-primary hover:underline" onClick={() => setIsSignUp(!isSignUp)}>
-                    {isSignUp ? "لدي حساب بالفعل" : "إنشاء حساب أدمن جديد"}
-                  </button>
-                </div>
               </form>
             </CardContent>
           </Card>

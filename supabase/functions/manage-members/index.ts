@@ -44,7 +44,9 @@ Deno.serve(async (req) => {
     const { action, ...body } = await req.json();
 
     if (action === "create") {
-      const { name, email, password } = body;
+      const { name, email, password, role: newRole } = body;
+      const assignedRole = newRole || "member";
+      
       if (!name || !email || !password) {
         return new Response(JSON.stringify({ error: "الاسم والبريد الإلكتروني وكلمة المرور مطلوبة" }), {
           status: 400,
@@ -66,15 +68,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      await supabaseAdmin.from("members").insert({
-        id: newUser.user.id,
-        pin_code: "deprecated",
-        created_by: user.id,
-      });
+      if (assignedRole === "member") {
+        await supabaseAdmin.from("members").insert({
+          id: newUser.user.id,
+          pin_code: "deprecated",
+          created_by: user.id,
+        });
+      }
 
       await supabaseAdmin.from("user_roles").insert({
         user_id: newUser.user.id,
-        role: "member",
+        role: assignedRole,
       });
 
       return new Response(JSON.stringify({ success: true, member_id: newUser.user.id }), {
@@ -84,7 +88,17 @@ Deno.serve(async (req) => {
 
     if (action === "delete") {
       const { member_id } = body;
+      
+      // Clean up related data first
+      await supabaseAdmin.from("notifications").delete().eq("user_id", member_id);
+      await supabaseAdmin.from("tasks").delete().eq("assigned_to", member_id);
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", member_id);
+      await supabaseAdmin.from("members").delete().eq("id", member_id);
+      await supabaseAdmin.from("profiles").delete().eq("id", member_id);
+      
+      // Delete auth user last
       await supabaseAdmin.auth.admin.deleteUser(member_id);
+      
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
