@@ -20,7 +20,7 @@ import {
 import {
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star
+  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield
 } from "lucide-react";
 
 interface Member {
@@ -61,10 +61,10 @@ const statCard = {
 };
 
 const CHART_COLORS = [
-  "hsl(142, 71%, 40%)", // success
-  "hsl(38, 92%, 50%)",  // warning
-  "hsl(0, 72%, 51%)",   // destructive
-  "hsl(199, 89%, 38%)", // primary
+  "hsl(142, 71%, 40%)",
+  "hsl(38, 92%, 50%)",
+  "hsl(0, 72%, 51%)",
+  "hsl(199, 89%, 38%)",
 ];
 
 export default function AdminDashboard() {
@@ -76,10 +76,16 @@ export default function AdminDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberPassword, setNewMemberPassword] = useState("");
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newTask, setNewTask] = useState({ title: "", description: "", points: 10, deadline: "", assigned_to: "" });
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTask, setEditTask] = useState({ title: "", description: "", points: 10, deadline: "", assigned_to: "" });
   const [submitting, setSubmitting] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [reassignTaskId, setReassignTaskId] = useState<string | null>(null);
@@ -125,6 +131,25 @@ export default function AdminDashboard() {
     } finally { setSubmitting(false); }
   };
 
+  const addAdmin = async () => {
+    if (!newAdminName || !newAdminEmail || !newAdminPassword || newAdminPassword.length < 6) {
+      toast({ title: "خطأ", description: "يرجى إدخال الاسم والبريد وكلمة مرور (6 أحرف على الأقل)", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "create", name: newAdminName, email: newAdminEmail, password: newAdminPassword, role: "admin" },
+      });
+      if (error || data?.error) throw new Error(data?.error || "فشل إنشاء حساب الأدمن");
+      toast({ title: "تم إنشاء حساب الأدمن بنجاح ✅" });
+      setNewAdminName(""); setNewAdminEmail(""); setNewAdminPassword("");
+      setShowAddAdmin(false);
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
   const deleteMember = async (memberId: string) => {
     if (!confirm("هل أنت متأكد من حذف هذا العضو؟")) return;
     setSubmitting(true);
@@ -145,9 +170,14 @@ export default function AdminDashboard() {
     if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
     setSubmitting(true);
     try {
+      const task = tasks.find(t => t.id === taskId);
+      // Deduct points if task had points awarded
+      if (task && task.points_awarded > 0 && task.assigned_to) {
+        await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
+      }
       const { error } = await supabase.from("tasks").delete().eq("id", taskId);
       if (error) throw error;
-      toast({ title: "تم حذف المهمة" });
+      toast({ title: "تم حذف المهمة وخصم النقاط المرتبطة بها" });
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -178,6 +208,35 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally { setSubmitting(false); }
+  };
+
+  const updateTask = async () => {
+    if (!editingTask) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("tasks").update({
+        title: editTask.title, description: editTask.description || null,
+        points: editTask.points, deadline: editTask.deadline,
+        assigned_to: editTask.assigned_to, updated_at: new Date().toISOString(),
+      }).eq("id", editingTask.id);
+      if (error) throw error;
+      toast({ title: "تم تعديل المهمة بنجاح ✅" });
+      setEditingTask(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const startEditTask = (task: Task) => {
+    setEditingTask(task);
+    setEditTask({
+      title: task.title,
+      description: task.description || "",
+      points: task.points,
+      deadline: task.deadline.slice(0, 16),
+      assigned_to: task.assigned_to || "",
+    });
   };
 
   const deductPoints = async (task: Task) => {
@@ -244,19 +303,15 @@ export default function AdminDashboard() {
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const sortedMembers = [...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
 
-  // Task templates from existing tasks
   const uniqueTaskTitles = [...new Set(tasks.map(t => t.title))];
 
-  // Weekly report data
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
   const weekCompleted = weekTasks.filter(t => t.status === "completed");
   const weekFailed = weekTasks.filter(t => t.status === "failed" || t.status === "deducted");
 
-  // Today tasks
   const todayTasks = tasks.filter(t => new Date(t.created_at).toDateString() === new Date().toDateString());
 
-  // Chart data
   const memberChartData = members.map(m => ({
     name: m.name,
     نقاط: m.total_points || 0,
@@ -308,7 +363,6 @@ export default function AdminDashboard() {
     const mCompleted = mTasks.filter(t => t.status === "completed");
     const mFailed = mTasks.filter(t => t.status === "failed" || t.status === "deducted");
     const mPending = mTasks.filter(t => t.status === "pending");
-    const mIncomplete = mTasks.filter(t => t.status === "pending" && new Date(t.deadline) < new Date());
     const mRate = mTasks.length > 0 ? Math.round((mCompleted.length / mTasks.length) * 100) : 0;
 
     return (
@@ -384,6 +438,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className="bg-primary/10 text-primary">{t.points} نقطة</Badge>
+                          <Button variant="ghost" size="icon" onClick={() => startEditTask(t)}><Edit className="h-4 w-4 text-primary" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteTask(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </CardContent>
@@ -408,9 +463,12 @@ export default function AdminDashboard() {
                           <p className="font-medium">{t.title}</p>
                           <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA")}</p>
                         </div>
-                        <Badge className={t.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
-                          {t.points_awarded > 0 ? "+" : ""}{t.points_awarded} نقطة
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={t.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
+                            {t.points_awarded > 0 ? "+" : ""}{t.points_awarded} نقطة
+                          </Badge>
+                          <Button variant="ghost" size="icon" onClick={() => deleteTask(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -456,6 +514,25 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Add Admin button */}
+            <Dialog open={showAddAdmin} onOpenChange={setShowAddAdmin}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Shield className="h-4 w-4" /> أدمن جديد
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>إنشاء حساب أدمن جديد</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="اسم الأدمن" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} />
+                  <Input placeholder="البريد الإلكتروني" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} dir="ltr" />
+                  <Input placeholder="كلمة المرور (6 أحرف على الأقل)" type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} dir="ltr" />
+                  <Button onClick={addAdmin} disabled={submitting} className="w-full">
+                    {submitting ? "جاري الإنشاء..." : "إنشاء حساب الأدمن"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -631,6 +708,7 @@ export default function AdminDashboard() {
                   const memberTasks = tasks.filter(t => t.assigned_to === m.id);
                   const memberCompleted = memberTasks.filter(t => t.status === "completed").length;
                   const memberIncomplete = memberTasks.filter(t => t.status === "failed" || t.status === "deducted").length;
+                  const memberPending = memberTasks.filter(t => t.status === "pending").length;
                   const memberRate = memberTasks.length > 0 ? Math.round((memberCompleted / memberTasks.length) * 100) : 0;
                   return (
                     <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
@@ -655,10 +733,11 @@ export default function AdminDashboard() {
                             <div className="flex justify-between text-sm mb-1"><span>نسبة الإنجاز</span><span>{memberRate}%</span></div>
                             <Progress value={memberRate} className="h-2" />
                           </div>
-                          <div className="flex gap-2 text-xs">
+                          <div className="flex gap-2 text-xs flex-wrap">
                             <Badge variant="secondary">{memberTasks.length} مهام</Badge>
                             <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]">{memberCompleted} مكتملة</Badge>
                             {memberIncomplete > 0 && <Badge variant="destructive">{memberIncomplete} غير مكتملة</Badge>}
+                            {memberPending > 0 && <Badge className="bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]">{memberPending} قيد التنفيذ</Badge>}
                           </div>
                         </CardContent>
                       </Card>
@@ -691,11 +770,8 @@ export default function AdminDashboard() {
                         </datalist>
                       </div>
                       <Textarea placeholder="وصف المهمة (اختياري)" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
-                      <Input type="number" placeholder="عدد النقاط" value={newTask.points} onChange={(e) => setNewTask({ ...newTask, points: parseInt(e.target.value) || 10 })} dir="ltr" />
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">الموعد النهائي (النقاط الكاملة حتى هذا الوقت)</label>
-                        <Input type="datetime-local" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} dir="ltr" />
-                      </div>
+                      <Input type="number" placeholder="النقاط" value={newTask.points} onChange={(e) => setNewTask({ ...newTask, points: parseInt(e.target.value) || 0 })} min={1} />
+                      <Input type="datetime-local" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} dir="ltr" />
                       <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newTask.assigned_to} onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}>
                         <option value="">اختر العضو</option>
                         {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -743,6 +819,9 @@ export default function AdminDashboard() {
                               <Badge variant={task.status === "completed" ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
                                 {task.status === "completed" ? "مكتملة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
                               </Badge>
+                              {task.status === "pending" && (
+                                <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
+                              )}
                               <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </div>
                           </div>
@@ -815,13 +894,21 @@ export default function AdminDashboard() {
                     <CardContent>
                       <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
-                          <Pie data={statusPieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                          <Pie data={statusPieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="value" paddingAngle={3}>
                             {statusPieData.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}
                           </Pie>
-                          <Legend />
+                          <Legend verticalAlign="bottom" height={36} />
                           <ReTooltip />
                         </PieChart>
                       </ResponsiveContainer>
+                      <div className="flex justify-center gap-4 mt-2">
+                        {statusPieData.map((d, idx) => (
+                          <div key={d.name} className="text-center">
+                            <p className="text-lg font-bold" style={{ color: CHART_COLORS[idx % CHART_COLORS.length] }}>{d.value}</p>
+                            <p className="text-xs text-muted-foreground">{d.name}</p>
+                          </div>
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -836,10 +923,10 @@ export default function AdminDashboard() {
                       {[
                         { label: "مهام اليوم", value: todayTasks.length, tasks: todayTasks },
                         { label: "المكتملة", value: todayTasks.filter(t => t.status === "completed").length, tasks: todayTasks.filter(t => t.status === "completed"), cls: "bg-[hsl(var(--success))] text-white" },
-                        { label: "المتبقية", value: todayTasks.filter(t => t.status === "pending").length, tasks: todayTasks.filter(t => t.status === "pending") },
+                        { label: "المتبقية", value: todayTasks.filter(t => t.status === "pending").length, tasks: todayTasks.filter(t => t.status === "pending"), cls: "bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]" },
                         { label: "غير مكتملة", value: todayTasks.filter(t => t.status === "failed" || t.status === "deducted").length, tasks: todayTasks.filter(t => t.status === "failed" || t.status === "deducted"), cls: "bg-destructive text-white" },
                       ].map(item => (
-                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-1 rounded transition-colors"
+                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors"
                           onClick={() => item.tasks.length > 0 && setStatDetail({ title: `${item.label} - اليوم`, tasks: item.tasks })}>
                           <span>{item.label}</span>
                           <Badge className={item.cls || ""}>{item.value}</Badge>
@@ -859,7 +946,7 @@ export default function AdminDashboard() {
                         { label: "غير مكتملة", value: weekFailed.length, tasks: weekFailed, cls: "bg-destructive text-white" },
                         { label: "نسبة الإنجاز", value: weekTasks.length > 0 ? Math.round((weekCompleted.length / weekTasks.length) * 100) + "%" : "0%", tasks: [] as Task[] },
                       ].map(item => (
-                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-1 rounded transition-colors"
+                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors"
                           onClick={() => item.tasks.length > 0 && setStatDetail({ title: `${item.label} - الأسبوع`, tasks: item.tasks })}>
                           <span>{item.label}</span>
                           <Badge className={item.cls || ""}>{item.value}</Badge>
@@ -943,6 +1030,26 @@ export default function AdminDashboard() {
             </select>
             <Button onClick={() => reassignTaskId && reassignTo && reassignTask(reassignTaskId, reassignTo)} disabled={!reassignTo || submitting} className="w-full">
               {submitting ? "جاري التحويل..." : "تحويل المهمة"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit task dialog */}
+      <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تعديل المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="عنوان المهمة" value={editTask.title} onChange={(e) => setEditTask({ ...editTask, title: e.target.value })} />
+            <Textarea placeholder="وصف المهمة (اختياري)" value={editTask.description} onChange={(e) => setEditTask({ ...editTask, description: e.target.value })} />
+            <Input type="number" placeholder="النقاط" value={editTask.points} onChange={(e) => setEditTask({ ...editTask, points: parseInt(e.target.value) || 0 })} min={1} />
+            <Input type="datetime-local" value={editTask.deadline} onChange={(e) => setEditTask({ ...editTask, deadline: e.target.value })} dir="ltr" />
+            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editTask.assigned_to} onChange={(e) => setEditTask({ ...editTask, assigned_to: e.target.value })}>
+              <option value="">اختر العضو</option>
+              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <Button onClick={updateTask} disabled={submitting} className="w-full">
+              {submitting ? "جاري التعديل..." : "حفظ التعديلات"}
             </Button>
           </div>
         </DialogContent>
