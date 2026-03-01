@@ -117,6 +117,7 @@ export type Database = {
           id: string
           points: number
           points_awarded: number | null
+          proof_url: string | null
           status: string
           title: string
           updated_at: string | null
@@ -132,6 +133,7 @@ export type Database = {
           id?: string
           points?: number
           points_awarded?: number | null
+          proof_url?: string | null
           status?: string
           title: string
           updated_at?: string | null
@@ -147,6 +149,7 @@ export type Database = {
           id?: string
           points?: number
           points_awarded?: number | null
+          proof_url?: string | null
           status?: string
           title?: string
           updated_at?: string | null

@@ -20,7 +20,7 @@ import {
 import {
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield
+  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck
 } from "lucide-react";
 
 interface Member {
@@ -28,6 +28,12 @@ interface Member {
   name: string;
   avatar_url: string | null;
   total_points: number;
+}
+
+interface AdminUser {
+  id: string;
+  name: string;
+  avatar_url: string | null;
 }
 
 interface Task {
@@ -42,6 +48,7 @@ interface Task {
   failure_reason: string | null;
   points_awarded: number;
   created_at: string;
+  proof_url: string | null;
 }
 
 const cardVariants = {
@@ -71,8 +78,9 @@ export default function AdminDashboard() {
   const { user, role, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"overview" | "members" | "tasks" | "leaderboard" | "reports">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "members" | "tasks" | "leaderboard" | "reports" | "admins">("overview");
   const [members, setMembers] = useState<Member[]>([]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -91,6 +99,7 @@ export default function AdminDashboard() {
   const [reassignTaskId, setReassignTaskId] = useState<string | null>(null);
   const [reassignTo, setReassignTo] = useState("");
   const [statDetail, setStatDetail] = useState<{ title: string; tasks: Task[] } | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -105,8 +114,11 @@ export default function AdminDashboard() {
     const { data: profilesData } = await supabase.from("profiles").select("*");
     const { data: rolesData } = await supabase.from("user_roles").select("user_id, role");
     const memberIds = rolesData?.filter(r => r.role === "member").map(r => r.user_id) || [];
+    const adminIds = rolesData?.filter(r => r.role === "admin").map(r => r.user_id) || [];
     const memberProfiles = profilesData?.filter(p => memberIds.includes(p.id)) || [];
+    const adminProfiles = profilesData?.filter(p => adminIds.includes(p.id)) || [];
     setMembers(memberProfiles as Member[]);
+    setAdmins(adminProfiles as AdminUser[]);
     const { data: tasksData } = await supabase.from("tasks").select("*").order("created_at", { ascending: false });
     setTasks((tasksData || []) as Task[]);
   };
@@ -145,6 +157,26 @@ export default function AdminDashboard() {
       toast({ title: "تم إنشاء حساب الأدمن بنجاح ✅" });
       setNewAdminName(""); setNewAdminEmail(""); setNewAdminPassword("");
       setShowAddAdmin(false);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const deleteAdmin = async (adminId: string) => {
+    if (adminId === user?.id) {
+      toast({ title: "خطأ", description: "لا يمكنك حذف حسابك الخاص", variant: "destructive" });
+      return;
+    }
+    if (!confirm("هل أنت متأكد من حذف هذا الأدمن؟")) return;
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "delete", member_id: adminId },
+      });
+      if (error || data?.error) throw new Error(data?.error || "فشل حذف الأدمن");
+      toast({ title: "تم حذف الأدمن بنجاح" });
+      loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally { setSubmitting(false); }
@@ -171,7 +203,6 @@ export default function AdminDashboard() {
     setSubmitting(true);
     try {
       const task = tasks.find(t => t.id === taskId);
-      // Deduct points if task had points awarded
       if (task && task.points_awarded > 0 && task.assigned_to) {
         await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
       }
@@ -239,6 +270,71 @@ export default function AdminDashboard() {
     });
   };
 
+  // Approve a pending_review task - award points
+  const approveTask = async (task: Task) => {
+    setSubmitting(true);
+    try {
+      const now = new Date();
+      const deadline = new Date(task.deadline);
+      const finalCutoff = new Date(deadline);
+      finalCutoff.setDate(finalCutoff.getDate() + 1);
+      finalCutoff.setHours(0, 0, 0, 0);
+
+      const completedAt = task.completed_at ? new Date(task.completed_at) : now;
+      let pointsAwarded = 0;
+      if (completedAt <= deadline) {
+        pointsAwarded = task.points;
+      } else if (completedAt < finalCutoff) {
+        pointsAwarded = Math.floor(task.points / 2);
+      } else {
+        pointsAwarded = Math.floor(task.points / 2);
+      }
+
+      const { error } = await supabase.from("tasks").update({
+        status: "completed" as any,
+        points_awarded: pointsAwarded,
+        updated_at: now.toISOString(),
+      }).eq("id", task.id);
+      if (error) throw error;
+
+      await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: pointsAwarded });
+
+      await supabase.from("notifications").insert({
+        user_id: task.assigned_to!, title: "تمت الموافقة على مهمتك ✅",
+        message: `تم قبول إثبات مهمة "${task.title}" وحصلت على ${pointsAwarded} نقطة!`,
+      });
+
+      toast({ title: `تمت الموافقة ومنح ${pointsAwarded} نقطة ✅` });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Reject a pending_review task - send back to pending
+  const rejectTask = async (task: Task) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("tasks").update({
+        status: "pending" as any,
+        proof_url: null,
+        completed_at: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", task.id);
+      if (error) throw error;
+
+      await supabase.from("notifications").insert({
+        user_id: task.assigned_to!, title: "تم رفض الإثبات ❌",
+        message: `تم رفض إثبات مهمة "${task.title}". يرجى إعادة تنفيذها وإرفاق إثبات صحيح.`,
+      });
+
+      toast({ title: "تم رفض الإثبات وإعادة المهمة للعضو" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
   const deductPoints = async (task: Task) => {
     if (!confirm(`هل تريد خصم ${task.points} نقطة من العضو؟`)) return;
     setSubmitting(true);
@@ -296,6 +392,7 @@ export default function AdminDashboard() {
   // Derived data
   const completedTasks = tasks.filter(t => t.status === "completed");
   const pendingTasks = tasks.filter(t => t.status === "pending");
+  const pendingReviewTasks = tasks.filter(t => t.status === "pending_review");
   const failedTasks = tasks.filter(t => t.status === "failed");
   const deductedTasks = tasks.filter(t => t.status === "deducted");
   const incompleteTasks = [...failedTasks, ...deductedTasks];
@@ -321,6 +418,7 @@ export default function AdminDashboard() {
   const statusPieData = [
     { name: "مكتملة", value: completedTasks.length },
     { name: "قيد التنفيذ", value: pendingTasks.length },
+    { name: "بانتظار الموافقة", value: pendingReviewTasks.length },
     { name: "غير مكتملة", value: incompleteTasks.length },
   ].filter(d => d.value > 0);
 
@@ -347,6 +445,7 @@ export default function AdminDashboard() {
     { id: "tasks" as const, label: "المهام", icon: ClipboardList },
     { id: "leaderboard" as const, label: "الترتيب", icon: Trophy },
     { id: "reports" as const, label: "التقارير", icon: BarChart3 },
+    { id: "admins" as const, label: "الأدمنز", icon: ShieldCheck },
   ];
 
   if (loading) return (
@@ -363,6 +462,7 @@ export default function AdminDashboard() {
     const mCompleted = mTasks.filter(t => t.status === "completed");
     const mFailed = mTasks.filter(t => t.status === "failed" || t.status === "deducted");
     const mPending = mTasks.filter(t => t.status === "pending");
+    const mPendingReview = mTasks.filter(t => t.status === "pending_review");
     const mRate = mTasks.length > 0 ? Math.round((mCompleted.length / mTasks.length) * 100) : 0;
 
     return (
@@ -423,6 +523,42 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Pending review tasks for this member */}
+          {mPendingReview.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" /> بانتظار موافقتك ({mPendingReview.length})
+              </h3>
+              <div className="space-y-2">
+                {mPendingReview.map((t, i) => (
+                  <motion.div key={t.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
+                    <Card className="border-primary/30">
+                      <CardContent className="p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">{t.title}</p>
+                          <Badge className="bg-primary/10 text-primary">{t.points} نقطة</Badge>
+                        </div>
+                        {t.proof_url && (
+                          <a href={t.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <ImageIcon className="h-4 w-4" /> عرض الإثبات
+                          </a>
+                        )}
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => approveTask(t)} disabled={submitting}>
+                            <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => rejectTask(t)} disabled={submitting}>
+                            <XCircle className="h-4 w-4" /> رفض
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {mPending.length > 0 && (
             <div>
@@ -514,32 +650,13 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Add Admin button */}
-            <Dialog open={showAddAdmin} onOpenChange={setShowAddAdmin}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Shield className="h-4 w-4" /> أدمن جديد
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>إنشاء حساب أدمن جديد</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <Input placeholder="اسم الأدمن" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} />
-                  <Input placeholder="البريد الإلكتروني" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} dir="ltr" />
-                  <Input placeholder="كلمة المرور (6 أحرف على الأقل)" type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} dir="ltr" />
-                  <Button onClick={addAdmin} disabled={submitting} className="w-full">
-                    {submitting ? "جاري الإنشاء..." : "إنشاء حساب الأدمن"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  {failedTasks.length > 0 && (
+                  {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                     <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {failedTasks.length}
+                      {failedTasks.length + pendingReviewTasks.length}
                     </span>
                   )}
                 </Button>
@@ -547,6 +664,31 @@ export default function AdminDashboard() {
               <SheetContent>
                 <SheetHeader><SheetTitle>التنبيهات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4">
+                  {pendingReviewTasks.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold text-primary">📸 بانتظار الموافقة ({pendingReviewTasks.length})</p>
+                      {pendingReviewTasks.map(t => {
+                        const assignee = members.find(m => m.id === t.assigned_to);
+                        return (
+                          <Card key={t.id} className="border-primary/30">
+                            <CardContent className="p-3 space-y-2">
+                              <p className="font-medium text-sm">{t.title}</p>
+                              <p className="text-xs text-muted-foreground">{assignee?.name}</p>
+                              {t.proof_url && (
+                                <a href={t.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                                  <ImageIcon className="h-3 w-3" /> عرض الإثبات
+                                </a>
+                              )}
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => approveTask(t)} disabled={submitting}>قبول</Button>
+                                <Button size="sm" variant="destructive" onClick={() => rejectTask(t)} disabled={submitting}>رفض</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
                   {failedTasks.length > 0 ? failedTasks.map(t => {
                     const assignee = members.find(m => m.id === t.assigned_to);
                     return (
@@ -558,7 +700,7 @@ export default function AdminDashboard() {
                         </CardContent>
                       </Card>
                     );
-                  }) : <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  }) : pendingReviewTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                 </div>
               </SheetContent>
             </Sheet>
@@ -576,6 +718,9 @@ export default function AdminDashboard() {
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
+              {tab.id === "tasks" && pendingReviewTasks.length > 0 && (
+                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">{pendingReviewTasks.length}</span>
+              )}
               {activeTab === tab.id && (
                 <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" transition={{ type: "spring" as const, stiffness: 300, damping: 30 }} />
               )}
@@ -590,11 +735,12 @@ export default function AdminDashboard() {
           {/* === OVERVIEW === */}
           {activeTab === "overview" && (
             <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {[
                   { value: members.length, label: "الأعضاء", color: "text-primary", tasks: [] as Task[] },
                   { value: tasks.length, label: "إجمالي المهام", color: "text-primary", tasks: tasks },
                   { value: completedTasks.length, label: "مكتملة", color: "text-[hsl(var(--success))]", tasks: completedTasks },
+                  { value: pendingReviewTasks.length, label: "بانتظار الموافقة", color: "text-primary", tasks: pendingReviewTasks },
                   { value: incompleteTasks.length, label: "غير مكتملة", color: "text-destructive", tasks: incompleteTasks },
                   { value: pendingTasks.length, label: "متبقية", color: "text-[hsl(var(--warning))]", tasks: pendingTasks },
                 ].map((stat, i) => (
@@ -607,12 +753,49 @@ export default function AdminDashboard() {
                         <motion.p className={`text-3xl font-bold ${stat.color}`} key={stat.value} initial={{ scale: 1.3 }} animate={{ scale: 1 }}>
                           {stat.value}
                         </motion.p>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                        <p className="text-xs text-muted-foreground">{stat.label}</p>
                       </CardContent>
                     </Card>
                   </motion.div>
                 ))}
               </div>
+
+              {/* Pending review section in overview */}
+              {pendingReviewTasks.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                  <Card className="border-primary/50">
+                    <CardHeader><CardTitle className="flex items-center gap-2 text-primary"><ImageIcon className="h-5 w-5" /> مهام بانتظار موافقتك ({pendingReviewTasks.length})</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      {pendingReviewTasks.map((task, i) => {
+                        const assignee = members.find(m => m.id === task.assigned_to);
+                        return (
+                          <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-bold">{task.title}</p>
+                                <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                              </div>
+                              {task.proof_url && (
+                                <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
+                                <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => rejectTask(task)} disabled={submitting}>
+                                <XCircle className="h-4 w-4" /> رفض الإثبات
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {failedTasks.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
@@ -709,6 +892,7 @@ export default function AdminDashboard() {
                   const memberCompleted = memberTasks.filter(t => t.status === "completed").length;
                   const memberIncomplete = memberTasks.filter(t => t.status === "failed" || t.status === "deducted").length;
                   const memberPending = memberTasks.filter(t => t.status === "pending").length;
+                  const memberPendingReview = memberTasks.filter(t => t.status === "pending_review").length;
                   const memberRate = memberTasks.length > 0 ? Math.round((memberCompleted / memberTasks.length) * 100) : 0;
                   return (
                     <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
@@ -736,6 +920,7 @@ export default function AdminDashboard() {
                           <div className="flex gap-2 text-xs flex-wrap">
                             <Badge variant="secondary">{memberTasks.length} مهام</Badge>
                             <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]">{memberCompleted} مكتملة</Badge>
+                            {memberPendingReview > 0 && <Badge className="bg-primary/10 text-primary">{memberPendingReview} بانتظار الموافقة</Badge>}
                             {memberIncomplete > 0 && <Badge variant="destructive">{memberIncomplete} غير مكتملة</Badge>}
                             {memberPending > 0 && <Badge className="bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]">{memberPending} قيد التنفيذ</Badge>}
                           </div>
@@ -786,14 +971,16 @@ export default function AdminDashboard() {
                 {tasks.map((task, i) => {
                   const assignee = members.find(m => m.id === task.assigned_to);
                   const isOverdue = task.status === "pending" && new Date(task.deadline) < new Date();
+                  const isPendingReview = task.status === "pending_review";
                   return (
                     <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" layout>
-                      <Card className={isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
+                      <Card className={isPendingReview ? "border-primary/50" : isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
+                                  : isPendingReview ? <ImageIcon className="h-5 w-5 text-primary" />
                                   : task.status === "failed" ? <AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" />
                                   : task.status === "deducted" ? <XCircle className="h-5 w-5 text-destructive" />
                                   : isOverdue ? <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -808,6 +995,24 @@ export default function AdminDashboard() {
                                 {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
                               </div>
                               {task.failure_reason && <p className="text-sm text-destructive mt-2 flex items-center gap-1"><XCircle className="h-4 w-4" /> {task.failure_reason}</p>}
+                              
+                              {/* Pending review actions */}
+                              {isPendingReview && (
+                                <div className="flex gap-2 mt-3 items-center">
+                                  {task.proof_url && (
+                                    <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
+                                      <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                                    </a>
+                                  )}
+                                  <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
+                                    <CheckCircle2 className="h-4 w-4" /> قبول
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => rejectTask(task)} disabled={submitting}>
+                                    <XCircle className="h-4 w-4" /> رفض
+                                  </Button>
+                                </div>
+                              )}
+
                               {task.status === "failed" && (
                                 <div className="flex gap-2 mt-3">
                                   <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>خصم النقاط</Button>
@@ -816,8 +1021,8 @@ export default function AdminDashboard() {
                               )}
                             </div>
                             <div className="flex items-center gap-1">
-                              <Badge variant={task.status === "completed" ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
-                                {task.status === "completed" ? "مكتملة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
+                              <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
+                                {task.status === "completed" ? "مكتملة" : isPendingReview ? "بانتظار الموافقة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
                               </Badge>
                               {task.status === "pending" && (
                                 <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
@@ -869,7 +1074,6 @@ export default function AdminDashboard() {
             <motion.div key="reports" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               <h2 className="text-xl font-bold">التقارير والإحصائيات</h2>
 
-              {/* Charts */}
               <div className="grid gap-4 md:grid-cols-2">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                   <Card>
@@ -914,7 +1118,6 @@ export default function AdminDashboard() {
                 </motion.div>
               </div>
 
-              {/* Daily & Weekly stats */}
               <div className="grid gap-4 md:grid-cols-2">
                 <motion.div custom={0} variants={statCard} initial="hidden" animate="visible">
                   <Card>
@@ -957,7 +1160,6 @@ export default function AdminDashboard() {
                 </motion.div>
               </div>
 
-              {/* Member comparison */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <Card>
                   <CardHeader><CardTitle>مقارنة الأعضاء</CardTitle></CardHeader>
@@ -984,7 +1186,6 @@ export default function AdminDashboard() {
                 </Card>
               </motion.div>
 
-              {/* Failed tasks report */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 <Card>
                   <CardHeader><CardTitle>المهام غير المنجزة وأسبابها</CardTitle></CardHeader>
@@ -1012,6 +1213,60 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
+            </motion.div>
+          )}
+
+          {/* === ADMINS === */}
+          {activeTab === "admins" && (
+            <motion.div key="admins" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /> إدارة الأدمنز ({admins.length})</h2>
+                <Dialog open={showAddAdmin} onOpenChange={setShowAddAdmin}>
+                  <DialogTrigger asChild>
+                    <Button><Shield className="h-4 w-4" /> أدمن جديد</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>إنشاء حساب أدمن جديد</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <Input placeholder="اسم الأدمن" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} />
+                      <Input placeholder="البريد الإلكتروني" type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} dir="ltr" />
+                      <Input placeholder="كلمة المرور (6 أحرف على الأقل)" type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} dir="ltr" />
+                      <Button onClick={addAdmin} disabled={submitting} className="w-full">
+                        {submitting ? "جاري الإنشاء..." : "إنشاء حساب الأدمن"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {admins.map((admin, i) => (
+                  <motion.div key={admin.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
+                    <Card className={admin.id === user?.id ? "border-primary/50" : ""}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={admin.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{admin.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <h3 className="font-bold">{admin.name}</h3>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Shield className="h-3 w-3" /> أدمن
+                              {admin.id === user?.id && <Badge variant="secondary" className="text-xs mr-1">أنت</Badge>}
+                            </div>
+                          </div>
+                          {admin.id !== user?.id && (
+                            <Button variant="ghost" size="icon" onClick={() => deleteAdmin(admin.id)} disabled={submitting}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1070,8 +1325,8 @@ export default function AdminDashboard() {
                         <p className="font-medium">{t.title}</p>
                         <p className="text-xs text-muted-foreground">{assignee?.name} • {new Date(t.deadline).toLocaleString("ar-SA")}</p>
                       </div>
-                      <Badge variant={t.status === "completed" ? "default" : t.status === "failed" ? "secondary" : t.status === "deducted" ? "destructive" : "secondary"}>
-                        {t.status === "completed" ? "مكتملة" : t.status === "failed" ? "بانتظار" : t.status === "deducted" ? "خُصمت" : "قيد التنفيذ"}
+                      <Badge variant={t.status === "completed" ? "default" : t.status === "pending_review" ? "default" : t.status === "failed" ? "secondary" : t.status === "deducted" ? "destructive" : "secondary"}>
+                        {t.status === "completed" ? "مكتملة" : t.status === "pending_review" ? "بانتظار الموافقة" : t.status === "failed" ? "بانتظار" : t.status === "deducted" ? "خُصمت" : "قيد التنفيذ"}
                       </Badge>
                     </div>
                   </CardContent>

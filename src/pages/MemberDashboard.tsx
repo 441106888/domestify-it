@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon
 } from "lucide-react";
 
 interface Task {
@@ -32,6 +32,7 @@ interface Task {
   failure_reason: string | null;
   points_awarded: number;
   created_at: string;
+  proof_url: string | null;
 }
 
 interface Notification {
@@ -88,7 +89,6 @@ function CountdownTimer({ deadline }: { deadline: string }) {
     );
   }
 
-  // After deadline, before midnight - half points
   if (diffToMidnight <= 7200000) {
     return (
       <motion.div initial={{ scale: 0.9 }} animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
@@ -117,6 +117,9 @@ export default function MemberDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; total_points: number; avatar_url: string | null }[]>([]);
   const [expiredPromptShown, setExpiredPromptShown] = useState(false);
+  const [proofTaskId, setProofTaskId] = useState<string | null>(null);
+  const [proofUploading, setProofUploading] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && (!user || role !== "member")) navigate("/");
@@ -149,7 +152,7 @@ export default function MemberDashboard() {
     const memberProfiles = (profiles || []).filter(p => memberIds.includes(p.id)).sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
     setLeaderboard(memberProfiles as any);
 
-    // Check for expired tasks (past midnight) that need failure reason
+    // Check for expired tasks
     if (!expiredPromptShown) {
       const expiredTask = loadedTasks.find(t => {
         if (t.status !== "pending") return false;
@@ -167,53 +170,38 @@ export default function MemberDashboard() {
     }
   };
 
-  const completeTask = async (taskId: string) => {
-    setSubmitting(true);
+  const handleProofUpload = async (file: File) => {
+    if (!proofTaskId || !user) return;
+    setProofUploading(true);
     try {
-      const task = tasks.find(t => t.id === taskId);
+      const task = tasks.find(t => t.id === proofTaskId);
       if (!task) return;
 
-      const now = new Date();
-      const deadline = new Date(task.deadline);
-      const finalCutoff = new Date(deadline);
-      finalCutoff.setDate(finalCutoff.getDate() + 1);
-      finalCutoff.setHours(0, 0, 0, 0);
+      // Upload proof file to storage
+      const fileExt = file.name.split('.').pop();
+      const filePath = `proofs/${proofTaskId}_${Date.now()}.${fileExt}`;
+      
+      // Check if proofs bucket exists, create usage in avatars bucket subfolder
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-      let pointsAwarded = 0;
-      let isOnTime = false;
-      if (now <= deadline) {
-        pointsAwarded = task.points;
-        isOnTime = true;
-      } else if (now < finalCutoff) {
-        pointsAwarded = Math.floor(task.points / 2);
-      } else {
-        pointsAwarded = Math.floor(task.points / 2);
-      }
-
+      // Update task: set status to pending_review with proof
       const { error } = await supabase.from("tasks").update({
-        status: "completed", completed_at: now.toISOString(),
-        points_awarded: pointsAwarded, updated_at: now.toISOString(),
-      }).eq("id", taskId);
+        status: "pending_review" as any,
+        proof_url: urlData.publicUrl,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", proofTaskId);
       if (error) throw error;
 
-      await supabase.rpc("increment_points", { _user_id: user!.id, _amount: pointsAwarded });
-
-      // Motivational message
-      if (isOnTime) {
-        toast({
-          title: "ممتاز! 🌟🎉",
-          description: `حصلت على ${pointsAwarded} نقطة كاملة! أداء رائع، استمر على هذا المستوى!`,
-        });
-      } else {
-        toast({
-          title: "أحسنت! 💪",
-          description: `حصلت على ${pointsAwarded} نقطة (نصف النقاط بسبب التأخير). حاول المرة القادمة إنهاء المهمة في الوقت المحدد لتحصل على النقاط كاملة!`,
-        });
-      }
+      toast({ title: "تم إرسال الإثبات ✅", description: "بانتظار موافقة الأدمن لمنح النقاط" });
+      setProofTaskId(null);
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
-    } finally { setSubmitting(false); }
+    } finally { setProofUploading(false); }
   };
 
   const submitFailureReason = async () => {
@@ -240,13 +228,13 @@ export default function MemberDashboard() {
   };
 
   const pendingTasks = tasks.filter(t => t.status === "pending");
+  const pendingReviewTasks = tasks.filter(t => t.status === "pending_review");
   const completedTasks = tasks.filter(t => t.status === "completed");
   const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
   const myRank = leaderboard.findIndex(m => m.id === user?.id) + 1;
 
-  // Simple personal report data
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
   const weekCompleted = weekTasks.filter(t => t.status === "completed").length;
@@ -255,6 +243,7 @@ export default function MemberDashboard() {
   const reportChartData = [
     { name: "مكتملة", عدد: completedTasks.length },
     { name: "قيد التنفيذ", عدد: pendingTasks.length },
+    { name: "بانتظار الموافقة", عدد: pendingReviewTasks.length },
     { name: "غير مكتملة", عدد: failedTasks.length },
   ];
 
@@ -326,7 +315,6 @@ export default function MemberDashboard() {
               <SheetContent>
                 <SheetHeader><SheetTitle>الإشعارات والتذكيرات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4">
-                  {/* Show pending tasks as reminders */}
                   {pendingTasks.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm font-bold text-primary">⏰ مهام تحتاج تنفيذ</p>
@@ -406,8 +394,8 @@ export default function MemberDashboard() {
                         <CountdownTimer deadline={task.deadline} />
                         <div className="flex gap-2">
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
-                            <Button size="sm" className="w-full" onClick={() => completeTask(task.id)} disabled={submitting}>
-                              <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
+                            <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
+                              <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                             </Button>
                           </motion.div>
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
@@ -429,6 +417,37 @@ export default function MemberDashboard() {
             )}
           </div>
         </motion.div>
+
+        {/* Pending review tasks */}
+        <AnimatePresence>
+          {pendingReviewTasks.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" /> بانتظار موافقة الأدمن ({pendingReviewTasks.length})
+              </h2>
+              <div className="space-y-2">
+                {pendingReviewTasks.map((task, i) => (
+                  <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
+                    <Card className="border-primary/30">
+                      <CardContent className="p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-medium">{task.title}</h3>
+                          <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
+                        </div>
+                        {task.proof_url && (
+                          <a href={task.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <ImageIcon className="h-4 w-4" /> عرض الإثبات
+                          </a>
+                        )}
+                        <Badge variant="secondary">بانتظار الموافقة</Badge>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Failed tasks */}
         <AnimatePresence>
@@ -468,7 +487,9 @@ export default function MemberDashboard() {
                       <CardContent className="p-3 flex items-center justify-between">
                         <div>
                           <h3 className="font-medium">{task.title}</h3>
-                          <p className="text-xs text-muted-foreground">{task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA")}
+                          </p>
                         </div>
                         <Badge className={task.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
                           {task.points_awarded > 0 ? "+" : ""}{task.points_awarded} نقطة
@@ -482,106 +503,90 @@ export default function MemberDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Personal mini report */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        {/* Leaderboard */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="h-5 w-5 text-primary" /> تقريرك المبسط
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> لوحة المتصدرين</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-2 rounded-lg bg-[hsl(var(--success))]/10">
-                  <p className="text-xl font-bold text-[hsl(var(--success))]">{completedTasks.length}</p>
-                  <p className="text-xs text-muted-foreground">مكتملة</p>
-                </div>
-                <div className="p-2 rounded-lg bg-[hsl(var(--warning))]/10">
-                  <p className="text-xl font-bold text-[hsl(var(--warning))]">{pendingTasks.length}</p>
-                  <p className="text-xs text-muted-foreground">معلقة</p>
-                </div>
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <p className="text-xl font-bold text-primary">{totalPointsEarned}</p>
-                  <p className="text-xs text-muted-foreground">نقطة مكتسبة</p>
-                </div>
+            <CardContent>
+              <div className="space-y-3">
+                {leaderboard.map((m, i) => (
+                  <motion.div key={m.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.08 }}
+                    className={`flex items-center gap-3 p-2 rounded-lg ${m.id === user?.id ? 'bg-primary/10 border border-primary/20' : 'bg-secondary/50'}`}>
+                    <div className="w-8 text-center">{getRankIcon(i) || <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>}</div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={m.avatar_url || undefined} />
+                      <AvatarFallback className="text-sm bg-primary/10 text-primary">{m.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium flex-1">{m.name} {m.id === user?.id && "(أنت)"}</span>
+                    <Badge variant="secondary">{m.total_points || 0} نقطة</Badge>
+                  </motion.div>
+                ))}
               </div>
-              {tasks.length > 0 && (
-                <ResponsiveContainer width="100%" height={150}>
-                  <BarChart data={reportChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <ReTooltip />
-                    <Bar dataKey="عدد" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-              <p className="text-xs text-muted-foreground text-center">
-                هذا الأسبوع أكملت {weekCompleted} من {weekTasks.length} مهام
-              </p>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Full leaderboard */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        {/* Simple report */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> الترتيب العام
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {leaderboard.map((m, i) => (
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + i * 0.08 }}
-                  className={`flex items-center gap-3 p-2 rounded-lg ${
-                    m.id === user?.id ? "bg-primary/10 border border-primary/20" :
-                    i < 3 ? "bg-secondary/50" : "bg-secondary/20"
-                  }`}
-                >
-                  <span className="w-8 text-center">
-                    {getRankIcon(i) || <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}
-                  </span>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={m.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">{m.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className={`flex-1 ${m.id === user?.id ? "font-bold text-primary" : ""}`}>
-                    {m.name} {m.id === user?.id ? "(أنت)" : ""}
-                  </span>
-                  <Badge variant={i < 3 ? "default" : "secondary"} className={
-                    i === 0 ? "bg-[hsl(var(--gold))] text-white" :
-                    i === 1 ? "bg-[hsl(var(--silver))] text-white" :
-                    i === 2 ? "bg-[hsl(var(--bronze))] text-white" : ""
-                  }>
-                    {m.total_points || 0}
-                  </Badge>
-                </motion.div>
-              ))}
+            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> تقريرك الشخصي</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div><p className="text-2xl font-bold text-primary">{totalPointsEarned}</p><p className="text-xs text-muted-foreground">نقاط مكتسبة</p></div>
+                <div><p className="text-2xl font-bold text-[hsl(var(--success))]">{weekCompleted}</p><p className="text-xs text-muted-foreground">مكتملة هذا الأسبوع</p></div>
+                <div><p className="text-2xl font-bold text-[hsl(var(--warning))]">{completionRate}%</p><p className="text-xs text-muted-foreground">نسبة الإنجاز</p></div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={reportChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <ReTooltip />
+                  <Bar dataKey="عدد" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </motion.div>
       </main>
 
-      {/* Failure reason dialog */}
-      <Dialog open={!!failureTaskId} onOpenChange={() => setFailureTaskId(null)}>
+      {/* Proof upload dialog */}
+      <Dialog open={!!proofTaskId} onOpenChange={() => setProofTaskId(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>سبب عدم التنفيذ</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {tasks.find(t => t.id === failureTaskId)?.title && (
-                <span className="font-medium text-foreground">المهمة: {tasks.find(t => t.id === failureTaskId)?.title}</span>
+          <DialogHeader><DialogTitle>إرفاق إثبات تنفيذ المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">يرجى إرفاق صورة أو فيديو كإثبات على تنفيذ المهمة. سيتم مراجعتها من قبل الأدمن قبل منح النقاط.</p>
+            <input
+              ref={proofInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleProofUpload(file);
+              }}
+            />
+            <Button onClick={() => proofInputRef.current?.click()} disabled={proofUploading} className="w-full" size="lg">
+              {proofUploading ? "جاري الرفع..." : (
+                <>
+                  <Upload className="h-5 w-5" /> اختر صورة أو فيديو
+                </>
               )}
-              <br />
-              سيتم إرسال السبب للأدمن لمراجعته واتخاذ القرار المناسب.
-            </p>
-            <Textarea placeholder="اكتب سبب عدم تمكنك من تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Failure reason dialog */}
+      <Dialog open={!!failureTaskId && !proofTaskId} onOpenChange={() => { setFailureTaskId(null); setFailureReason(""); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>سبب عدم تنفيذ المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />
             <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full">
-              {submitting ? "جاري الإرسال..." : "إرسال للأدمن"}
+              {submitting ? "جاري الإرسال..." : "إرسال السبب"}
             </Button>
           </div>
         </DialogContent>
