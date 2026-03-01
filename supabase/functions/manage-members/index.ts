@@ -54,6 +54,9 @@ Deno.serve(async (req) => {
         });
       }
 
+      let userId: string;
+
+      // Try to create user, handle if already exists
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -62,26 +65,51 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        return new Response(JSON.stringify({ error: createError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        if (createError.message.includes("already been registered")) {
+          // User exists in auth - find them and reuse
+          const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = users?.find((u: any) => u.email === email);
+          if (!existingUser) {
+            return new Response(JSON.stringify({ error: "تعذر العثور على المستخدم" }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          userId = existingUser.id;
+          // Update password and name
+          await supabaseAdmin.auth.admin.updateUser(userId, { password, user_metadata: { name } });
+        } else {
+          return new Response(JSON.stringify({ error: createError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        userId = newUser.user.id;
+      }
+
+      // Ensure profile exists
+      const { data: existingProfile } = await supabaseAdmin.from("profiles").select("id").eq("id", userId).single();
+      if (!existingProfile) {
+        await supabaseAdmin.from("profiles").insert({ id: userId, name });
       }
 
       if (assignedRole === "member") {
-        await supabaseAdmin.from("members").insert({
-          id: newUser.user.id,
+        // Upsert member record
+        await supabaseAdmin.from("members").upsert({
+          id: userId,
           pin_code: "deprecated",
           created_by: user.id,
         });
       }
 
-      await supabaseAdmin.from("user_roles").insert({
-        user_id: newUser.user.id,
+      // Upsert role
+      await supabaseAdmin.from("user_roles").upsert({
+        user_id: userId,
         role: assignedRole,
       });
 
-      return new Response(JSON.stringify({ success: true, member_id: newUser.user.id }), {
+      return new Response(JSON.stringify({ success: true, member_id: userId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
