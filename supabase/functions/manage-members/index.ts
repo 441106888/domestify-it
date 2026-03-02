@@ -56,7 +56,6 @@ Deno.serve(async (req) => {
 
       let userId: string;
 
-      // Try to create user, handle if already exists
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -66,7 +65,6 @@ Deno.serve(async (req) => {
 
       if (createError) {
         if (createError.message.includes("already been registered")) {
-          // User exists in auth - find them and reuse
           const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
           const existingUser = users?.find((u: any) => u.email === email);
           if (!existingUser) {
@@ -76,7 +74,6 @@ Deno.serve(async (req) => {
             });
           }
           userId = existingUser.id;
-          // Update password and name
           await supabaseAdmin.auth.admin.updateUser(userId, { password, user_metadata: { name } });
         } else {
           return new Response(JSON.stringify({ error: createError.message }), {
@@ -88,14 +85,9 @@ Deno.serve(async (req) => {
         userId = newUser.user.id;
       }
 
-      // Ensure profile exists
-      const { data: existingProfile } = await supabaseAdmin.from("profiles").select("id").eq("id", userId).single();
-      if (!existingProfile) {
-        await supabaseAdmin.from("profiles").insert({ id: userId, name });
-      }
+      await supabaseAdmin.from("profiles").upsert({ id: userId, name });
 
       if (assignedRole === "member") {
-        // Upsert member record
         await supabaseAdmin.from("members").upsert({
           id: userId,
           pin_code: "deprecated",
@@ -103,7 +95,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Upsert role
       await supabaseAdmin.from("user_roles").upsert({
         user_id: userId,
         role: assignedRole,
@@ -114,17 +105,59 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "update") {
+      const { member_id, name, email, password } = body;
+      if (!member_id) {
+        return new Response(JSON.stringify({ error: "معرف العضو مطلوب" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const updateData: any = {};
+      if (email) updateData.email = email;
+      if (password) updateData.password = password;
+      if (name) updateData.user_metadata = { name };
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUser(member_id, updateData);
+        if (updateError) {
+          return new Response(JSON.stringify({ error: updateError.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (name) {
+        await supabaseAdmin.from("profiles").update({ name }).eq("id", member_id);
+      }
+
+      // Get updated email
+      const { data: { user: updatedUser } } = await supabaseAdmin.auth.admin.getUserById(member_id);
+
+      return new Response(JSON.stringify({ success: true, email: updatedUser?.email }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "get_email") {
+      const { member_id } = body;
+      const { data: { user: targetUser } } = await supabaseAdmin.auth.admin.getUserById(member_id);
+      return new Response(JSON.stringify({ email: targetUser?.email || "" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "delete") {
       const { member_id } = body;
       
-      // Clean up related data first
       await supabaseAdmin.from("notifications").delete().eq("user_id", member_id);
       await supabaseAdmin.from("tasks").delete().eq("assigned_to", member_id);
       await supabaseAdmin.from("user_roles").delete().eq("user_id", member_id);
       await supabaseAdmin.from("members").delete().eq("id", member_id);
       await supabaseAdmin.from("profiles").delete().eq("id", member_id);
       
-      // Delete auth user last
       await supabaseAdmin.auth.admin.deleteUser(member_id);
       
       return new Response(JSON.stringify({ success: true }), {

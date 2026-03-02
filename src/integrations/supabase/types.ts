@@ -118,6 +118,8 @@ export type Database = {
           points: number
           points_awarded: number | null
           proof_url: string | null
+          rejection_reason: string | null
+          requires_proof: boolean
           status: string
           title: string
           updated_at: string | null
@@ -134,6 +136,8 @@ export type Database = {
           points?: number
           points_awarded?: number | null
           proof_url?: string | null
+          rejection_reason?: string | null
+          requires_proof?: boolean
           status?: string
           title: string
           updated_at?: string | null
@@ -150,6 +154,8 @@ export type Database = {
           points?: number
           points_awarded?: number | null
           proof_url?: string | null
+          rejection_reason?: string | null
+          requires_proof?: boolean
           status?: string
           title?: string
           updated_at?: string | null
