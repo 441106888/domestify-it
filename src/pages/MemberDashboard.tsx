@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera
 } from "lucide-react";
 
 interface Task {
@@ -33,6 +33,8 @@ interface Task {
   points_awarded: number;
   created_at: string;
   proof_url: string | null;
+  requires_proof: boolean;
+  rejection_reason: string | null;
 }
 
 interface Notification {
@@ -61,12 +63,11 @@ function CountdownTimer({ deadline }: { deadline: string }) {
   }, []);
 
   const deadlineDate = new Date(deadline);
-  const midnight = new Date(deadlineDate);
-  midnight.setDate(midnight.getDate() + 1);
-  midnight.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(deadlineDate);
+  endOfDay.setHours(23, 59, 59, 999);
 
   const diffToDeadline = deadlineDate.getTime() - now.getTime();
-  const diffToMidnight = midnight.getTime() - now.getTime();
+  const diffToMidnight = endOfDay.getTime() - now.getTime();
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / 3600000);
@@ -120,6 +121,7 @@ export default function MemberDashboard() {
   const [proofTaskId, setProofTaskId] = useState<string | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
   const proofInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && (!user || role !== "member")) navigate("/");
@@ -140,7 +142,7 @@ export default function MemberDashboard() {
   const loadData = async () => {
     if (!user) return;
     const { data: tasksData } = await supabase.from("tasks").select("*").eq("assigned_to", user.id).order("created_at", { ascending: false });
-    const loadedTasks = (tasksData || []) as Task[];
+    const loadedTasks = (tasksData || []).map((t: any) => ({ ...t, requires_proof: t.requires_proof ?? true })) as Task[];
     setTasks(loadedTasks);
 
     const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
@@ -157,10 +159,9 @@ export default function MemberDashboard() {
       const expiredTask = loadedTasks.find(t => {
         if (t.status !== "pending") return false;
         const deadline = new Date(t.deadline);
-        const midnight = new Date(deadline);
-        midnight.setDate(midnight.getDate() + 1);
-        midnight.setHours(0, 0, 0, 0);
-        return new Date() > midnight;
+        const endOfDay = new Date(deadline);
+        endOfDay.setHours(23, 59, 59, 999);
+        return new Date() > endOfDay;
       });
       if (expiredTask) {
         setFailureTaskId(expiredTask.id);
@@ -177,17 +178,14 @@ export default function MemberDashboard() {
       const task = tasks.find(t => t.id === proofTaskId);
       if (!task) return;
 
-      // Upload proof file to storage
       const fileExt = file.name.split('.').pop();
       const filePath = `proofs/${proofTaskId}_${Date.now()}.${fileExt}`;
       
-      // Check if proofs bucket exists, create usage in avatars bucket subfolder
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
       
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-      // Update task: set status to pending_review with proof
       const { error } = await supabase.from("tasks").update({
         status: "pending_review" as any,
         proof_url: urlData.publicUrl,
@@ -202,6 +200,27 @@ export default function MemberDashboard() {
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally { setProofUploading(false); }
+  };
+
+  // Complete task without proof (when requires_proof is false)
+  const completeTaskWithoutProof = async (taskId: string) => {
+    setSubmitting(true);
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const { error } = await supabase.from("tasks").update({
+        status: "pending_review" as any,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+      if (error) throw error;
+
+      toast({ title: "تم تسجيل إتمام المهمة ✅", description: "بانتظار موافقة الأدمن" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
   };
 
   const submitFailureReason = async () => {
@@ -374,10 +393,9 @@ export default function MemberDashboard() {
             <AnimatePresence>
               {pendingTasks.map((task, i) => {
                 const deadlineDate = new Date(task.deadline);
-                const midnight = new Date(deadlineDate);
-                midnight.setDate(midnight.getDate() + 1);
-                midnight.setHours(0, 0, 0, 0);
-                const isExpired = new Date() > midnight;
+                const endOfDay = new Date(deadlineDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                const isExpired = new Date() > endOfDay;
 
                 return (
                   <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible"
@@ -392,11 +410,22 @@ export default function MemberDashboard() {
                           <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
                         </div>
                         <CountdownTimer deadline={task.deadline} />
+                        {task.rejection_reason && (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                            <p className="text-sm text-destructive">سبب الرفض السابق: {task.rejection_reason}</p>
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
-                            <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
-                              <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
-                            </Button>
+                            {task.requires_proof ? (
+                              <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
+                                <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                                <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
+                              </Button>
+                            )}
                           </motion.div>
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
                             <Button size="sm" variant="outline" className="w-full" onClick={() => setFailureTaskId(task.id)}>
@@ -568,13 +597,33 @@ export default function MemberDashboard() {
                 if (file) handleProofUpload(file);
               }}
             />
-            <Button onClick={() => proofInputRef.current?.click()} disabled={proofUploading} className="w-full" size="lg">
-              {proofUploading ? "جاري الرفع..." : (
-                <>
-                  <Upload className="h-5 w-5" /> اختر صورة أو فيديو
-                </>
-              )}
-            </Button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleProofUpload(file);
+              }}
+            />
+            <div className="flex gap-3">
+              <Button onClick={() => proofInputRef.current?.click()} disabled={proofUploading} className="flex-1" size="lg">
+                {proofUploading ? "جاري الرفع..." : (
+                  <>
+                    <Upload className="h-5 w-5" /> من المعرض
+                  </>
+                )}
+              </Button>
+              <Button onClick={() => cameraInputRef.current?.click()} disabled={proofUploading} className="flex-1" size="lg" variant="outline">
+                {proofUploading ? "جاري الرفع..." : (
+                  <>
+                    <Camera className="h-5 w-5" /> من الكاميرا
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
