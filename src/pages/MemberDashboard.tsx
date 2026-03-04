@@ -354,7 +354,7 @@ export default function MemberDashboard() {
                         <CardContent className="p-3">
                           <p className="font-medium text-sm">{n.title}</p>
                           <p className="text-xs text-muted-foreground">{n.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA")}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
                         </CardContent>
                       </Card>
                     )) : <p className="text-sm text-muted-foreground text-center">لا توجد إشعارات</p>}
@@ -517,7 +517,7 @@ export default function MemberDashboard() {
                         <div>
                           <h3 className="font-medium">{task.title}</h3>
                           <p className="text-xs text-muted-foreground">
-                            {task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA")}
+                            {task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
                         <Badge className={task.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
