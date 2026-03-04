@@ -254,16 +254,25 @@ export default function AdminDashboard() {
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    let deductPoints = false;
+    if (task.points_awarded > 0 && task.assigned_to) {
+      const choice = confirm(`هل تريد خصم ${task.points_awarded} نقطة من العضو؟\n\nاضغط "موافق" لخصم النقاط\nاضغط "إلغاء" للحذف بدون خصم`);
+      deductPoints = choice;
+    } else {
+      if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
+    }
+    
     setSubmitting(true);
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (task && task.points_awarded > 0 && task.assigned_to) {
+      if (deductPoints && task.points_awarded > 0 && task.assigned_to) {
         await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
       }
       const { error } = await supabase.from("tasks").delete().eq("id", taskId);
       if (error) throw error;
-      toast({ title: "تم حذف المهمة وخصم النقاط المرتبطة بها" });
+      toast({ title: deductPoints ? "تم حذف المهمة وخصم النقاط" : "تم حذف المهمة بدون خصم النقاط" });
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -297,7 +306,7 @@ export default function AdminDashboard() {
       if (error) throw error;
       await supabase.from("notifications").insert({
         user_id: newTask.assigned_to, title: "مهمة جديدة 📋",
-        message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA")}`,
+        message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`,
       });
       toast({ title: "تم إضافة المهمة بنجاح ✅" });
       setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: "", requires_proof: true });
@@ -658,7 +667,7 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(t.deadline).toLocaleString("ar-SA")}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(t.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className="bg-primary/10 text-primary">{t.points} نقطة</Badge>
@@ -685,7 +694,7 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA")}</p>
+                          <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={t.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
@@ -1095,7 +1104,7 @@ export default function AdminDashboard() {
                               </div>
                               {task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
                               <div className="flex flex-wrap gap-2 text-xs">
-                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA")}</Badge>
+                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</Badge>
                                 {assignee && <Badge variant="secondary">{assignee.name}</Badge>}
                                 <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
                                 {!task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
