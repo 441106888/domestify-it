@@ -149,10 +149,10 @@ export default function MemberDashboard() {
     setNotifications((notifData || []) as Notification[]);
 
     const { data: profiles } = await supabase.from("profiles").select("id, name, total_points, avatar_url");
-    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "member");
-    const memberIds = roles?.map(r => r.user_id) || [];
-    const memberProfiles = (profiles || []).filter(p => memberIds.includes(p.id)).sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
-    setLeaderboard(memberProfiles as any);
+    // Show all profiles in leaderboard (no role filtering needed - RLS prevents seeing others' roles)
+    const allProfiles = (profiles || []).filter(p => p.id !== user.id || true).sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+    setLeaderboard(allProfiles as any);
+    setLeaderboard(allProfiles as any);
 
     // Check for expired tasks
     if (!expiredPromptShown) {
