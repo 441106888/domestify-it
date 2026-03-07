@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield
 } from "lucide-react";
 
 interface Task {
@@ -44,6 +44,11 @@ interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+const SA_LOCALE_OPTS: Intl.DateTimeFormatOptions = {
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh"
+};
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
@@ -122,13 +127,30 @@ export default function MemberDashboard() {
   const [proofUploading, setProofUploading] = useState(false);
   const proofInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || role !== "member")) navigate("/");
+    if (!loading && !user) navigate("/");
+    // Allow access if user has member role (even if also admin)
+    if (!loading && user && role !== "member") {
+      // Check if user has member role too
+      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "member").maybeSingle()
+        .then(({ data }) => {
+          if (!data) navigate("/");
+        });
+    }
   }, [user, role, loading, navigate]);
 
   useEffect(() => {
-    if (user && role === "member") {
+    if (user) {
+      // Check if also admin
+      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
+        .then(({ data }) => setIsAlsoAdmin(!!data));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
       loadData();
       const channel = supabase
         .channel("member-tasks")
@@ -137,22 +159,50 @@ export default function MemberDashboard() {
         .subscribe();
       return () => { supabase.removeChannel(channel); };
     }
-  }, [user, role]);
+  }, [user]);
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Watch for new notifications and send browser notification
+  const prevNotifCountRef = useRef(0);
+  useEffect(() => {
+    const unread = notifications.filter(n => !n.is_read);
+    if (unread.length > prevNotifCountRef.current && prevNotifCountRef.current > 0) {
+      const latest = unread[0];
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(latest.title, { body: latest.message, icon: "/favicon.ico" });
+      }
+    }
+    prevNotifCountRef.current = unread.length;
+  }, [notifications]);
 
   const loadData = async () => {
     if (!user) return;
-    const { data: tasksData } = await supabase.from("tasks").select("*").eq("assigned_to", user.id).order("created_at", { ascending: false });
+    const { data: tasksData } = await supabase.from("tasks").select("*").eq("assigned_to", user.id).order("deadline", { ascending: true });
     const loadedTasks = (tasksData || []).map((t: any) => ({ ...t, requires_proof: t.requires_proof ?? true })) as Task[];
     setTasks(loadedTasks);
 
     const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     setNotifications((notifData || []) as Notification[]);
 
-    const { data: profiles } = await supabase.from("profiles").select("id, name, total_points, avatar_url");
-    // Show all profiles in leaderboard (no role filtering needed - RLS prevents seeing others' roles)
-    const allProfiles = (profiles || []).filter(p => p.id !== user.id || true).sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
-    setLeaderboard(allProfiles as any);
-    setLeaderboard(allProfiles as any);
+    // Leaderboard: fetch only members (users with member role)
+    // Use edge function to get member list since RLS blocks cross-user role queries
+    try {
+      const { data: memberData } = await supabase.functions.invoke("manage-members", {
+        body: { action: "list" },
+      });
+      const memberProfiles = (memberData?.members || []).sort((a: any, b: any) => (b.total_points || 0) - (a.total_points || 0));
+      setLeaderboard(memberProfiles);
+    } catch {
+      // Fallback: just show profiles  
+      const { data: profiles } = await supabase.from("profiles").select("id, name, total_points, avatar_url");
+      setLeaderboard((profiles || []).sort((a, b) => (b.total_points || 0) - (a.total_points || 0)) as any);
+    }
 
     // Check for expired tasks
     if (!expiredPromptShown) {
@@ -202,13 +252,9 @@ export default function MemberDashboard() {
     } finally { setProofUploading(false); }
   };
 
-  // Complete task without proof (when requires_proof is false)
   const completeTaskWithoutProof = async (taskId: string) => {
     setSubmitting(true);
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-
       const { error } = await supabase.from("tasks").update({
         status: "pending_review" as any,
         completed_at: new Date().toISOString(),
@@ -317,6 +363,11 @@ export default function MemberDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAlsoAdmin && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
+                <Shield className="h-4 w-4 ml-1" /> لوحة الأدمن
+              </Button>
+            )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -354,7 +405,7 @@ export default function MemberDashboard() {
                         <CardContent className="p-3">
                           <p className="font-medium text-sm">{n.title}</p>
                           <p className="text-xs text-muted-foreground">{n.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
                         </CardContent>
                       </Card>
                     )) : <p className="text-sm text-muted-foreground text-center">لا توجد إشعارات</p>}
@@ -392,15 +443,16 @@ export default function MemberDashboard() {
           <div className="space-y-3">
             <AnimatePresence>
               {pendingTasks.map((task, i) => {
-                const deadlineDate = new Date(task.deadline);
-                const endOfDay = new Date(deadlineDate);
-                endOfDay.setHours(23, 59, 59, 999);
-                const isExpired = new Date() > endOfDay;
-
                 return (
                   <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible"
                     exit={{ opacity: 0, x: -100, transition: { duration: 0.3 } }} layout>
-                    <Card className={isExpired ? "border-destructive" : new Date(task.deadline) < new Date() ? "border-[hsl(var(--warning))]/50" : "border-primary/20"}>
+                    <Card className={(() => {
+                      const deadlineDate = new Date(task.deadline);
+                      const endOfDay = new Date(deadlineDate);
+                      endOfDay.setHours(23, 59, 59, 999);
+                      const isExpired = new Date() > endOfDay;
+                      return isExpired ? "border-destructive" : new Date(task.deadline) < new Date() ? "border-[hsl(var(--warning))]/50" : "border-primary/20";
+                    })()}>
                       <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
@@ -409,6 +461,7 @@ export default function MemberDashboard() {
                           </div>
                           <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
                         </div>
+                        <p className="text-xs text-muted-foreground">الموعد النهائي: {new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
                         <CountdownTimer deadline={task.deadline} />
                         {task.rejection_reason && (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
@@ -517,7 +570,7 @@ export default function MemberDashboard() {
                         <div>
                           <h3 className="font-medium">{task.title}</h3>
                           <p className="text-xs text-muted-foreground">
-                            {task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            {task.completed_at && new Date(task.completed_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}
                           </p>
                         </div>
                         <Badge className={task.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
@@ -552,6 +605,7 @@ export default function MemberDashboard() {
                     <Badge variant="secondary">{m.total_points || 0} نقطة</Badge>
                   </motion.div>
                 ))}
+                {leaderboard.length === 0 && <p className="text-center text-muted-foreground">لا يوجد متسابقون بعد</p>}
               </div>
             </CardContent>
           </Card>
@@ -568,7 +622,7 @@ export default function MemberDashboard() {
                 <div><p className="text-2xl font-bold text-[hsl(var(--warning))]">{completionRate}%</p><p className="text-xs text-muted-foreground">نسبة الإنجاز</p></div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={reportChartData}>
+                <BarChart data={reportChartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
