@@ -187,26 +187,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "list") {
-      const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "member");
-      const memberIds = roles?.map((r: any) => r.user_id) || [];
-      
-      if (memberIds.length === 0) {
-        return new Response(JSON.stringify({ members: [] }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: members } = await supabaseAdmin
-        .from("profiles")
-        .select("id, name, avatar_url, total_points")
-        .in("id", memberIds);
-
-      return new Response(JSON.stringify({ members: members || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     return new Response(JSON.stringify({ error: "إجراء غير معروف" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
