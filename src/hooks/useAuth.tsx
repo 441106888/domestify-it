@@ -35,14 +35,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Fetch role and profile using setTimeout to avoid deadlock
         setTimeout(async () => {
-          const { data: roleData } = await supabase
+          // Fetch all roles - prioritize admin if user has both
+          const { data: rolesData } = await supabase
             .from("user_roles")
             .select("role")
-            .eq("user_id", session.user.id)
-            .single();
-          setRole((roleData?.role as UserRole) ?? null);
+            .eq("user_id", session.user.id);
+          const roles = rolesData?.map(r => r.role) || [];
+          const primaryRole = roles.includes("admin") ? "admin" : roles.includes("member") ? "member" : null;
+          setRole(primaryRole as UserRole);
 
           const { data: profileData } = await supabase
             .from("profiles")

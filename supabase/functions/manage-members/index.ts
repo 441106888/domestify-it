@@ -27,6 +27,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { action, ...body } = await req.json();
+
+    // Allow "list" action for any authenticated user (for leaderboard)
+    if (action === "list") {
+      const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "member");
+      const memberIds = roles?.map((r: any) => r.user_id) || [];
+      
+      if (memberIds.length === 0) {
+        return new Response(JSON.stringify({ members: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: members } = await supabaseAdmin
+        .from("profiles")
+        .select("id, name, avatar_url, total_points")
+        .in("id", memberIds);
+
+      return new Response(JSON.stringify({ members: members || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // All other actions require admin role
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -40,8 +64,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { action, ...body } = await req.json();
 
     if (action === "create") {
       const { name, email, password, role: newRole } = body;
@@ -161,26 +183,6 @@ Deno.serve(async (req) => {
       await supabaseAdmin.auth.admin.deleteUser(member_id);
       
       return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (action === "list") {
-      const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "member");
-      const memberIds = roles?.map((r: any) => r.user_id) || [];
-      
-      if (memberIds.length === 0) {
-        return new Response(JSON.stringify({ members: [] }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: members } = await supabaseAdmin
-        .from("profiles")
-        .select("id, name, avatar_url, total_points")
-        .in("id", memberIds);
-
-      return new Response(JSON.stringify({ members: members || [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

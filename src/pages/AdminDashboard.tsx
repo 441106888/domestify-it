@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  PieChart, Pie, Cell, ResponsiveContainer, Legend
+  PieChart, Pie, Cell, ResponsiveContainer, Legend, LabelList
 } from "recharts";
 import {
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3,
@@ -54,6 +54,11 @@ interface Task {
   requires_proof: boolean;
   rejection_reason: string | null;
 }
+
+const SA_LOCALE_OPTS: Intl.DateTimeFormatOptions = {
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh"
+};
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
@@ -95,7 +100,7 @@ export default function AdminDashboard() {
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [newTask, setNewTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: "", requires_proof: true });
+  const [newTask, setNewTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: [] as string[], requires_proof: true });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: "", requires_proof: true });
   const [submitting, setSubmitting] = useState(false);
@@ -105,16 +110,19 @@ export default function AdminDashboard() {
   const [statDetail, setStatDetail] = useState<{ title: string; tasks: Task[] } | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  // Edit member state
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editMemberName, setEditMemberName] = useState("");
   const [editMemberEmail, setEditMemberEmail] = useState("");
   const [editMemberPassword, setEditMemberPassword] = useState("");
   const [loadingMemberEmail, setLoadingMemberEmail] = useState(false);
-  // Rejection reason state
   const [rejectingTask, setRejectingTask] = useState<Task | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionReasons, setRejectionReasons] = useState<string[]>([]);
+  // Delete task state
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [deleteStep, setDeleteStep] = useState<"confirm" | "points">("confirm");
+  // Admin is also member
+  const [adminIsMember, setAdminIsMember] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -123,6 +131,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user && role === "admin") loadData();
   }, [user, role]);
+
+  // Check if current admin is also a member
+  useEffect(() => {
+    if (user) {
+      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "member").maybeSingle()
+        .then(({ data }) => setAdminIsMember(!!data));
+    }
+  }, [user]);
 
   const loadData = async () => {
     const { data: profilesData } = await supabase.from("profiles").select("*");
@@ -133,10 +149,9 @@ export default function AdminDashboard() {
     const adminProfiles = profilesData?.filter(p => adminIds.includes(p.id)) || [];
     setMembers(memberProfiles as Member[]);
     setAdmins(adminProfiles as AdminUser[]);
-    const { data: tasksData } = await supabase.from("tasks").select("*").order("created_at", { ascending: false });
+    const { data: tasksData } = await supabase.from("tasks").select("*").order("deadline", { ascending: true });
     setTasks((tasksData || []).map((t: any) => ({ ...t, requires_proof: t.requires_proof ?? true })) as Task[]);
     
-    // Load unique rejection reasons
     const reasons = (tasksData || []).map((t: any) => t.rejection_reason).filter(Boolean);
     setRejectionReasons([...new Set(reasons)] as string[]);
   };
@@ -253,26 +268,23 @@ export default function AdminDashboard() {
     } finally { setSubmitting(false); }
   };
 
-  const deleteTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    let deductPoints = false;
-    if (task.points_awarded > 0 && task.assigned_to) {
-      const choice = confirm(`هل تريد خصم ${task.points_awarded} نقطة من العضو؟\n\nاضغط "موافق" لخصم النقاط\nاضغط "إلغاء" للحذف بدون خصم`);
-      deductPoints = choice;
-    } else {
-      if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
-    }
-    
+  // Step 1: Ask for confirmation. Step 2: If points awarded, ask about deduction.
+  const initiateDeleteTask = (task: Task) => {
+    setDeletingTask(task);
+    setDeleteStep("confirm");
+  };
+
+  const confirmDeleteTask = async (deductPoints?: boolean) => {
+    if (!deletingTask) return;
     setSubmitting(true);
     try {
-      if (deductPoints && task.points_awarded > 0 && task.assigned_to) {
-        await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
+      if (deductPoints && deletingTask.points_awarded > 0 && deletingTask.assigned_to) {
+        await supabase.rpc("increment_points", { _user_id: deletingTask.assigned_to, _amount: -deletingTask.points_awarded });
       }
-      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      const { error } = await supabase.from("tasks").delete().eq("id", deletingTask.id);
       if (error) throw error;
       toast({ title: deductPoints ? "تم حذف المهمة وخصم النقاط" : "تم حذف المهمة بدون خصم النقاط" });
+      setDeletingTask(null);
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -281,13 +293,19 @@ export default function AdminDashboard() {
 
   const getTodayMin = () => {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
+    // Convert to Saudi time
+    const saTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
+    const y = saTime.getFullYear();
+    const m = String(saTime.getMonth() + 1).padStart(2, "0");
+    const d = String(saTime.getDate()).padStart(2, "0");
+    const h = String(saTime.getHours()).padStart(2, "0");
+    const min = String(saTime.getMinutes()).padStart(2, "0");
+    return `${y}-${m}-${d}T${h}:${min}`;
   };
 
   const addTask = async () => {
-    if (!newTask.title || !newTask.deadline || !newTask.assigned_to) {
-      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
+    if (!newTask.title || !newTask.deadline || newTask.assigned_to.length === 0) {
+      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة واختيار عضو واحد على الأقل", variant: "destructive" });
       return;
     }
     const points = parseInt(newTask.points as string) || 0;
@@ -297,19 +315,24 @@ export default function AdminDashboard() {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("tasks").insert({
-        title: newTask.title, description: newTask.description || null,
-        points, deadline: newTask.deadline,
-        assigned_to: newTask.assigned_to, created_by: user!.id,
-        requires_proof: newTask.requires_proof,
-      } as any);
-      if (error) throw error;
-      await supabase.from("notifications").insert({
-        user_id: newTask.assigned_to, title: "مهمة جديدة 📋",
-        message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`,
-      });
-      toast({ title: "تم إضافة المهمة بنجاح ✅" });
-      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: "", requires_proof: true });
+      // Create a task for each selected member
+      for (const memberId of newTask.assigned_to) {
+        const { error } = await supabase.from("tasks").insert({
+          title: newTask.title, description: newTask.description || null,
+          points, deadline: newTask.deadline,
+          assigned_to: memberId, created_by: user!.id,
+          requires_proof: newTask.requires_proof,
+        } as any);
+        if (error) throw error;
+        
+        const memberName = members.find(m => m.id === memberId)?.name || "";
+        await supabase.from("notifications").insert({
+          user_id: memberId, title: "مهمة جديدة 📋",
+          message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`,
+        });
+      }
+      toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
+      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: true });
       setShowAddTask(false);
       loadData();
     } catch (error: any) {
@@ -326,13 +349,25 @@ export default function AdminDashboard() {
     }
     setSubmitting(true);
     try {
+      const oldAssignee = editingTask.assigned_to;
+      const newAssignee = editTask.assigned_to;
+
       const { error } = await supabase.from("tasks").update({
         title: editTask.title, description: editTask.description || null,
         points, deadline: editTask.deadline,
-        assigned_to: editTask.assigned_to, updated_at: new Date().toISOString(),
+        assigned_to: newAssignee, updated_at: new Date().toISOString(),
         requires_proof: editTask.requires_proof,
       } as any).eq("id", editingTask.id);
       if (error) throw error;
+
+      // If reassigned, notify new member
+      if (oldAssignee !== newAssignee && newAssignee) {
+        await supabase.from("notifications").insert({
+          user_id: newAssignee, title: "مهمة محولة إليك 🔄",
+          message: `تم تحويل مهمة "${editTask.title}" إليك`,
+        });
+      }
+
       toast({ title: "تم تعديل المهمة بنجاح ✅" });
       setEditingTask(null);
       loadData();
@@ -364,11 +399,11 @@ export default function AdminDashboard() {
       const completedAt = task.completed_at ? new Date(task.completed_at) : now;
       let pointsAwarded = 0;
       if (completedAt <= deadline) {
-        pointsAwarded = task.points; // Full points
+        pointsAwarded = task.points;
       } else if (completedAt <= endOfDeadlineDay) {
-        pointsAwarded = Math.floor(task.points / 2); // Half points before midnight
+        pointsAwarded = Math.floor(task.points / 2);
       } else {
-        pointsAwarded = 0; // No points after midnight
+        pointsAwarded = 0;
       }
 
       const { error } = await supabase.from("tasks").update({
@@ -480,6 +515,16 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     }
+  };
+
+  // Toggle member multi-select
+  const toggleMemberSelection = (memberId: string) => {
+    setNewTask(prev => ({
+      ...prev,
+      assigned_to: prev.assigned_to.includes(memberId)
+        ? prev.assigned_to.filter(id => id !== memberId)
+        : [...prev.assigned_to, memberId]
+    }));
   };
 
   // Derived data
@@ -667,12 +712,12 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(t.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(t.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className="bg-primary/10 text-primary">{t.points} نقطة</Badge>
                           <Button variant="ghost" size="icon" onClick={() => startEditTask(t)}><Edit className="h-4 w-4 text-primary" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteTask(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(t)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -694,13 +739,13 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                          <p className="text-xs text-muted-foreground">{t.completed_at && new Date(t.completed_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={t.points_awarded >= 0 ? "bg-[hsl(var(--success))] text-white" : "bg-destructive text-white"}>
                             {t.points_awarded > 0 ? "+" : ""}{t.points_awarded} نقطة
                           </Badge>
-                          <Button variant="ghost" size="icon" onClick={() => deleteTask(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(t)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -733,6 +778,91 @@ export default function AdminDashboard() {
             </div>
           )}
         </main>
+
+        {/* Delete task dialog - in member detail */}
+        <Dialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{deleteStep === "confirm" ? "تأكيد حذف المهمة" : "خصم النقاط؟"}</DialogTitle></DialogHeader>
+            {deleteStep === "confirm" ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">هل أنت متأكد أنك تريد حذف مهمة "{deletingTask?.title}"؟</p>
+                <div className="flex gap-2">
+                  <Button variant="destructive" className="flex-1" onClick={() => {
+                    if (deletingTask && deletingTask.points_awarded > 0 && deletingTask.assigned_to) {
+                      setDeleteStep("points");
+                    } else {
+                      confirmDeleteTask(false);
+                    }
+                  }}>نعم، احذف</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setDeletingTask(null)}>إلغاء</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">هل تريد خصم {deletingTask?.points_awarded} نقطة من العضو؟</p>
+                <div className="flex gap-2">
+                  <Button variant="destructive" className="flex-1" onClick={() => confirmDeleteTask(true)} disabled={submitting}>
+                    نعم، اخصم النقاط واحذف
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => confirmDeleteTask(false)} disabled={submitting}>
+                    احذف بدون خصم
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Rejection dialog - in member detail */}
+        <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              {rejectionReasons.length > 0 && (
+                <div>
+                  <Label className="text-sm mb-1 block">اختر من أسباب سابقة أو اكتب سبباً جديداً</Label>
+                  <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+                    value="" onChange={(e) => { if (e.target.value) setRejectionReason(e.target.value); }}>
+                    <option value="">اختر سبب سابق...</option>
+                    {rejectionReasons.map((r, i) => <option key={i} value={r}>{r}</option>)}
+                  </select>
+                </div>
+              )}
+              <Textarea placeholder="اكتب سبب الرفض..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} />
+              <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full">
+                {submitting ? "جاري الرفض..." : "رفض الإثبات"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit member dialog - in member detail */}
+        <Dialog open={!!editingMember} onOpenChange={() => setEditingMember(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>تعديل بيانات العضو</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm mb-1 block">الاسم</Label>
+                <Input value={editMemberName} onChange={(e) => setEditMemberName(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block">البريد الإلكتروني</Label>
+                {loadingMemberEmail ? (
+                  <p className="text-sm text-muted-foreground p-2">جاري التحميل...</p>
+                ) : (
+                  <Input value={editMemberEmail} onChange={(e) => setEditMemberEmail(e.target.value)} dir="ltr" type="email" />
+                )}
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block">كلمة المرور الجديدة (اتركها فارغة إذا لا تريد تغييرها)</Label>
+                <Input value={editMemberPassword} onChange={(e) => setEditMemberPassword(e.target.value)} dir="ltr" type="password" placeholder="كلمة مرور جديدة" />
+              </div>
+              <Button onClick={updateMember} disabled={submitting} className="w-full">
+                {submitting ? "جاري التعديل..." : "حفظ التعديلات"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -747,6 +877,11 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
           </div>
           <div className="flex items-center gap-2">
+            {adminIsMember && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+                <Users className="h-4 w-4 ml-1" /> لوحة العضو
+              </Button>
+            )}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -761,43 +896,29 @@ export default function AdminDashboard() {
               <SheetContent>
                 <SheetHeader><SheetTitle>التنبيهات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4">
-                  {pendingReviewTasks.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-bold text-primary">📸 بانتظار الموافقة ({pendingReviewTasks.length})</p>
-                      {pendingReviewTasks.map(t => {
-                        const assignee = members.find(m => m.id === t.assigned_to);
-                        return (
-                          <Card key={t.id} className="border-primary/30">
-                            <CardContent className="p-3 space-y-2">
-                              <p className="font-medium text-sm">{t.title}</p>
-                              <p className="text-xs text-muted-foreground">{assignee?.name}</p>
-                              {t.proof_url && (
-                                <a href={t.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
-                                  <ImageIcon className="h-3 w-3" /> عرض الإثبات
-                                </a>
-                              )}
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => approveTask(t)} disabled={submitting}>قبول</Button>
-                                <Button size="sm" variant="destructive" onClick={() => openRejectDialog(t)} disabled={submitting}>رفض</Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {failedTasks.length > 0 ? failedTasks.map(t => {
+                  {pendingReviewTasks.length > 0 && pendingReviewTasks.map(t => {
+                    const assignee = members.find(m => m.id === t.assigned_to);
+                    return (
+                      <Card key={t.id} className="border-primary/30">
+                        <CardContent className="p-3">
+                          <p className="font-medium text-sm">{t.title}</p>
+                          <p className="text-xs text-muted-foreground">{assignee?.name} أرسل إثبات بانتظار موافقتك</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  {failedTasks.length > 0 && failedTasks.map(t => {
                     const assignee = members.find(m => m.id === t.assigned_to);
                     return (
                       <Card key={t.id} className="border-destructive/30">
                         <CardContent className="p-3">
                           <p className="font-medium text-sm">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{assignee?.name} - بانتظار قرارك</p>
-                          {t.failure_reason && <p className="text-xs text-destructive mt-1">السبب: {t.failure_reason}</p>}
+                          <p className="text-xs text-destructive">{assignee?.name} لم ينفذ المهمة</p>
                         </CardContent>
                       </Card>
                     );
-                  }) : pendingReviewTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  }) }
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                 </div>
               </SheetContent>
             </Sheet>
@@ -863,7 +984,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              {/* Pending review section in overview */}
               {pendingReviewTasks.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                   <Card className="border-primary/50">
@@ -1052,15 +1172,19 @@ export default function AdminDashboard() {
                     <DialogHeader><DialogTitle>إضافة مهمة جديدة</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
+                        <Label className="text-sm mb-1 block">عنوان المهمة</Label>
+                        {uniqueTaskTitles.length > 0 && (
+                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+                            value="" onChange={(e) => { if (e.target.value) setNewTask({ ...newTask, title: e.target.value }); }}>
+                            <option value="">اختر من عناوين سابقة...</option>
+                            {uniqueTaskTitles.map((t, i) => <option key={i} value={t}>{t}</option>)}
+                          </select>
+                        )}
                         <Input
-                          list="task-templates"
-                          placeholder="عنوان المهمة (أو اختر من السابقة)"
+                          placeholder="أو اكتب عنوان جديد"
                           value={newTask.title}
                           onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                         />
-                        <datalist id="task-templates">
-                          {uniqueTaskTitles.map(t => <option key={t} value={t} />)}
-                        </datalist>
                       </div>
                       <Textarea placeholder="وصف المهمة (اختياري)" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} />
                       <Input type="number" placeholder="عدد النقاط" value={newTask.points} onChange={(e) => setNewTask({ ...newTask, points: e.target.value })} min={1} />
@@ -1068,10 +1192,29 @@ export default function AdminDashboard() {
                         <Label className="text-sm mb-1 block">الموعد النهائي</Label>
                         <Input type="datetime-local" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} dir="ltr" min={getTodayMin()} />
                       </div>
-                      <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newTask.assigned_to} onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}>
-                        <option value="">اختر العضو</option>
-                        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                      </select>
+                      <div>
+                        <Label className="text-sm mb-1 block">اختر الأعضاء (يمكنك اختيار أكثر من واحد)</Label>
+                        <div className="border rounded-md p-2 space-y-1 max-h-48 overflow-y-auto">
+                          {members.map((m) => (
+                            <label key={m.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-secondary/50 transition-colors ${newTask.assigned_to.includes(m.id) ? 'bg-primary/10 border border-primary/30' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={newTask.assigned_to.includes(m.id)}
+                                onChange={() => toggleMemberSelection(m.id)}
+                                className="rounded"
+                              />
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={m.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs">{m.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">{m.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                        {newTask.assigned_to.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">تم اختيار {newTask.assigned_to.length} عضو</p>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between border rounded-md p-3">
                         <Label className="text-sm">يتطلب إرفاق إثبات</Label>
                         <Switch checked={newTask.requires_proof} onCheckedChange={(checked) => setNewTask({ ...newTask, requires_proof: checked })} />
@@ -1104,8 +1247,8 @@ export default function AdminDashboard() {
                               </div>
                               {task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
                               <div className="flex flex-wrap gap-2 text-xs">
-                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</Badge>
-                                {assignee && <Badge variant="secondary">{assignee.name}</Badge>}
+                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>
+                                {assignee && <Badge variant="secondary" className="font-bold text-sm">{assignee.name}</Badge>}
                                 <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
                                 {!task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
                                 {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
@@ -1135,6 +1278,15 @@ export default function AdminDashboard() {
                                   <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>تحويل لآخر</Button>
                                 </div>
                               )}
+
+                              {/* Allow reassigning any pending task */}
+                              {task.status === "pending" && (
+                                <div className="flex gap-2 mt-3">
+                                  <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                                    <RefreshCw className="h-4 w-4" /> تحويل لعضو آخر
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1">
                               <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
@@ -1143,7 +1295,7 @@ export default function AdminDashboard() {
                               {task.status === "pending" && (
                                 <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
                               )}
-                              <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </div>
                           </div>
                         </CardContent>
@@ -1196,12 +1348,14 @@ export default function AdminDashboard() {
                     <CardHeader><CardTitle className="text-base">نقاط الأعضاء</CardTitle></CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={memberChartData}>
+                        <BarChart data={memberChartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" />
                           <YAxis />
                           <ReTooltip />
-                          <Bar dataKey="نقاط" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="نقاط" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]}>
+                            <LabelList dataKey="نقاط" position="top" style={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -1214,7 +1368,7 @@ export default function AdminDashboard() {
                     <CardContent>
                       <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
-                          <Pie data={statusPieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="value" paddingAngle={3}>
+                          <Pie data={statusPieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="value" paddingAngle={3} label={false}>
                             {statusPieData.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}
                           </Pie>
                           <Legend verticalAlign="bottom" height={36} />
@@ -1411,17 +1565,30 @@ export default function AdminDashboard() {
         <DialogContent>
           <DialogHeader><DialogTitle>تعديل المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="عنوان المهمة" value={editTask.title} onChange={(e) => setEditTask({ ...editTask, title: e.target.value })} />
+            <div>
+              <Label className="text-sm mb-1 block">عنوان المهمة</Label>
+              {uniqueTaskTitles.length > 0 && (
+                <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+                  value="" onChange={(e) => { if (e.target.value) setEditTask({ ...editTask, title: e.target.value }); }}>
+                  <option value="">اختر من عناوين سابقة...</option>
+                  {uniqueTaskTitles.map((t, i) => <option key={i} value={t}>{t}</option>)}
+                </select>
+              )}
+              <Input placeholder="أو اكتب عنوان جديد" value={editTask.title} onChange={(e) => setEditTask({ ...editTask, title: e.target.value })} />
+            </div>
             <Textarea placeholder="وصف المهمة (اختياري)" value={editTask.description} onChange={(e) => setEditTask({ ...editTask, description: e.target.value })} />
             <Input type="number" placeholder="عدد النقاط" value={editTask.points} onChange={(e) => setEditTask({ ...editTask, points: e.target.value })} min={1} />
             <div>
               <Label className="text-sm mb-1 block">الموعد النهائي</Label>
               <Input type="datetime-local" value={editTask.deadline} onChange={(e) => setEditTask({ ...editTask, deadline: e.target.value })} dir="ltr" min={getTodayMin()} />
             </div>
-            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editTask.assigned_to} onChange={(e) => setEditTask({ ...editTask, assigned_to: e.target.value })}>
-              <option value="">اختر العضو</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <div>
+              <Label className="text-sm mb-1 block">العضو المسند إليه</Label>
+              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editTask.assigned_to} onChange={(e) => setEditTask({ ...editTask, assigned_to: e.target.value })}>
+                <option value="">اختر العضو</option>
+                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
             <div className="flex items-center justify-between border rounded-md p-3">
               <Label className="text-sm">يتطلب إرفاق إثبات</Label>
               <Switch checked={editTask.requires_proof} onCheckedChange={(checked) => setEditTask({ ...editTask, requires_proof: checked })} />
@@ -1477,19 +1644,53 @@ export default function AdminDashboard() {
               </div>
             )}
             <Textarea placeholder="اكتب سبب الرفض..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} />
-            <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full" variant="destructive">
-              {submitting ? "جاري الإرسال..." : "رفض الإثبات وإرسال السبب"}
+            <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full">
+              {submitting ? "جاري الرفض..." : "رفض الإثبات"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete task dialog */}
+      <Dialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{deleteStep === "confirm" ? "تأكيد حذف المهمة" : "خصم النقاط؟"}</DialogTitle></DialogHeader>
+          {deleteStep === "confirm" ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">هل أنت متأكد أنك تريد حذف مهمة "{deletingTask?.title}"؟</p>
+              <div className="flex gap-2">
+                <Button variant="destructive" className="flex-1" onClick={() => {
+                  if (deletingTask && deletingTask.points_awarded > 0 && deletingTask.assigned_to) {
+                    setDeleteStep("points");
+                  } else {
+                    confirmDeleteTask(false);
+                  }
+                }}>نعم، احذف</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setDeletingTask(null)}>إلغاء</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">هل تريد خصم {deletingTask?.points_awarded} نقطة من العضو؟</p>
+              <div className="flex gap-2">
+                <Button variant="destructive" className="flex-1" onClick={() => confirmDeleteTask(true)} disabled={submitting}>
+                  نعم، اخصم النقاط واحذف
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => confirmDeleteTask(false)} disabled={submitting}>
+                  احذف بدون خصم
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Stat detail dialog */}
       <Dialog open={!!statDetail} onOpenChange={() => setStatDetail(null)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{statDetail?.title}</DialogTitle></DialogHeader>
           <div className="space-y-2">
-            {statDetail?.tasks.map(t => {
+            {statDetail?.tasks.map((t) => {
               const assignee = members.find(m => m.id === t.assigned_to);
               return (
                 <Card key={t.id}>
@@ -1497,18 +1698,23 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium">{t.title}</p>
-                        <p className="text-xs text-muted-foreground">{assignee?.name} • {new Date(t.deadline).toLocaleString("ar-SA")}</p>
+                        <p className="text-xs text-muted-foreground">{assignee?.name} • {new Date(t.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
                       </div>
-                      <Badge variant={t.status === "completed" ? "default" : t.status === "pending_review" ? "default" : t.status === "failed" ? "secondary" : t.status === "deducted" ? "destructive" : "secondary"}>
-                        {t.status === "completed" ? "مكتملة" : t.status === "pending_review" ? "بانتظار الموافقة" : t.status === "failed" ? "بانتظار" : t.status === "deducted" ? "خُصمت" : "قيد التنفيذ"}
-                      </Badge>
+                      <Badge>{t.status === "completed" ? "مكتملة" : t.status === "pending_review" ? "بانتظار الموافقة" : t.status === "failed" ? "غير مكتملة" : t.status === "deducted" ? "خُصمت" : "قيد التنفيذ"}</Badge>
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
-            {statDetail?.tasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد بيانات</p>}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Proof preview dialog */}
+      <Dialog open={!!proofPreview} onOpenChange={() => setProofPreview(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>عرض الإثبات</DialogTitle></DialogHeader>
+          {proofPreview && <img src={proofPreview} alt="إثبات" className="w-full rounded-lg" />}
         </DialogContent>
       </Dialog>
     </div>
