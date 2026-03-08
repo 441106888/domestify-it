@@ -978,6 +978,48 @@ export default function AdminDashboard() {
         </div>
       </motion.header>
 
+      <AnimatePresence>
+        {showTelegramBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mx-4 mt-3 max-w-7xl lg:mx-auto"
+          >
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 space-y-2">
+                    <p className="font-bold text-sm">📱 فعّل إشعارات تلقرام!</p>
+                    <p className="text-xs text-muted-foreground">تصلك تنبيهات المهام مباشرة على جوالك عبر بوت تلقرام. فعّلها من قسم الإشعارات (🔔).</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => setShowTelegramBanner(false)}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    window.open(`https://t.me/taskhome_noti_bot?start=${user?.id ?? ""}`, "_blank");
+                    setShowTelegramBanner(false);
+                  }}
+                >
+                  <Send className="h-4 w-4 ml-1" />
+                  فتح بوت تلقرام الآن
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Tabs */}
       <div className="border-b bg-card">
         <div className="flex gap-1 px-4 max-w-7xl mx-auto overflow-x-auto">
