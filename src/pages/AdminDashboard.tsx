@@ -126,6 +126,9 @@ export default function AdminDashboard() {
   const [adminIsMember, setAdminIsMember] = useState(false);
   const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
   const [showTelegramBanner, setShowTelegramBanner] = useState(false);
+  const [msgTo, setMsgTo] = useState("");
+  const [msgText, setMsgText] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
