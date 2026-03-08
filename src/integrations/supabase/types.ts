@@ -84,6 +84,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          telegram_chat_id: string | null
           total_points: number | null
           updated_at: string | null
         }
@@ -92,6 +93,7 @@ export type Database = {
           created_at?: string | null
           id: string
           name: string
+          telegram_chat_id?: string | null
           total_points?: number | null
           updated_at?: string | null
         }
@@ -100,6 +102,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          telegram_chat_id?: string | null
           total_points?: number | null
           updated_at?: string | null
         }
