@@ -579,7 +579,7 @@ export default function MemberDashboard() {
         )}
       </AnimatePresence>
 
-      <main className="p-4 max-w-3xl mx-auto space-y-6">
+      <main className="p-3 sm:p-4 max-w-3xl mx-auto space-y-4 sm:space-y-6 pb-8">
         {/* Progress card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="overflow-hidden bg-gradient-to-l from-primary/5 to-transparent">
