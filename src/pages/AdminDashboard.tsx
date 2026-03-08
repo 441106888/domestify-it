@@ -354,7 +354,7 @@ export default function AdminDashboard() {
 
       const { error } = await supabase.from("tasks").update({
         title: editTask.title, description: editTask.description || null,
-        points, deadline: editTask.deadline,
+        points, deadline: editTask.deadline + ":00+03:00",
         assigned_to: newAssignee, updated_at: new Date().toISOString(),
         requires_proof: editTask.requires_proof,
       } as any).eq("id", editingTask.id);
