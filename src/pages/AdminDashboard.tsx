@@ -915,7 +915,7 @@ export default function AdminDashboard() {
             </Avatar>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg font-bold truncate leading-tight">لوحة التحكم</h1>
-              <p className="text-[11px] sm:text-sm text-muted-foreground truncate leading-tight">مرحباً، {profile?.name}</p>
+              <p className="text-[11px] sm:text-sm text-muted-foreground leading-tight">مرحباً، {profile?.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
