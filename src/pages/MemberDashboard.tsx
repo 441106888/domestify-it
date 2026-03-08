@@ -866,6 +866,36 @@ export default function MemberDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={showEditProfile} onOpenChange={setShowEditProfile}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعديل بياناتي</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2" dir="rtl">
+            <div>
+              <Label className="text-sm mb-1 block">الاسم</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">البريد الإلكتروني</Label>
+              {loadingEmail ? (
+                <p className="text-sm text-muted-foreground p-2">جاري التحميل...</p>
+              ) : (
+                <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} dir="ltr" type="email" />
+              )}
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">كلمة المرور الجديدة (اتركها فارغة إذا لا تريد تغييرها)</Label>
+              <Input value={editPassword} onChange={(e) => setEditPassword(e.target.value)} dir="ltr" type="password" placeholder="كلمة مرور جديدة" />
+            </div>
+            <Button onClick={saveProfile} disabled={submitting} className="w-full">
+              {submitting ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
