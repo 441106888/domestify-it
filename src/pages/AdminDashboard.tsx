@@ -280,6 +280,12 @@ export default function AdminDashboard() {
       if (deductPoints && deletingTask.points_awarded > 0 && deletingTask.assigned_to) {
         await supabase.rpc("increment_points", { _user_id: deletingTask.assigned_to, _amount: -deletingTask.points_awarded });
       }
+      // Delete related notifications for this task's assigned member
+      if (deletingTask.assigned_to) {
+        await supabase.from("notifications").delete()
+          .eq("user_id", deletingTask.assigned_to)
+          .like("message", `%${deletingTask.title}%`);
+      }
       const { error } = await supabase.from("tasks").delete().eq("id", deletingTask.id);
       if (error) throw error;
       toast({ title: deductPoints ? "تم حذف المهمة وخصم النقاط" : "تم حذف المهمة بدون خصم النقاط" });
