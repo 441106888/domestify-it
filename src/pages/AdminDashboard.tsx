@@ -328,7 +328,6 @@ export default function AdminDashboard() {
         await sendNotification(memberId, "مهمة جديدة 📋",
           `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`);
       }
-      }
       toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
       setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: false });
       setShowAddTask(false);
