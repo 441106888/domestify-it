@@ -1572,7 +1572,7 @@ export default function AdminDashboard() {
               {sortedMembers.map((m, i) => (
                 <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
                   <Card className={`${getMemberRank(i) <= 3 ? "border-2 " + (getMemberRank(i) === 1 ? "border-[hsl(var(--gold))]" : getMemberRank(i) === 2 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}`}>
-                    <CardContent className="p-4 flex items-center gap-4">
+                    <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
                       <div className="text-center w-12">{getRankIcon(getMemberRank(i))}</div>
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={m.avatar_url || undefined} />
