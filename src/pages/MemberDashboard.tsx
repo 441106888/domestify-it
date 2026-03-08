@@ -714,7 +714,7 @@ export default function MemberDashboard() {
                 {leaderboard.map((m, i) => (
                   <motion.div key={m.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.08 }}
                     className={`flex items-center gap-3 p-2 rounded-lg ${m.id === user?.id ? 'bg-primary/10 border border-primary/20' : 'bg-secondary/50'}`}>
-                    <div className="w-8 text-center">{getRankIcon(i) || <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>}</div>
+                    <div className="w-8 text-center">{getRankIcon(getRank(i)) || <span className="text-xs font-bold text-muted-foreground">{getRank(i)}</span>}</div>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={m.avatar_url || undefined} />
                       <AvatarFallback className="text-sm bg-primary/10 text-primary">{m.name.charAt(0)}</AvatarFallback>
