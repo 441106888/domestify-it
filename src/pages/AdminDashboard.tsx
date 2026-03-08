@@ -365,6 +365,10 @@ export default function AdminDashboard() {
       toast({ title: "خطأ", description: "يرجى إدخال عدد النقاط", variant: "destructive" });
       return;
     }
+    if (new Date(editTask.deadline) <= new Date()) {
+      toast({ title: "خطأ", description: "لا يمكن تحديد موعد في الماضي", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const oldAssignee = editingTask.assigned_to;

@@ -35,7 +35,10 @@ Deno.serve(async (req) => {
       .select("user_id")
       .eq("role", "admin");
 
-    const adminIds = adminRoles?.map((r: any) => r.user_id) || [];
+    let adminIds = adminRoles?.map((r: any) => r.user_id) || [];
+    if (exclude_user_id) {
+      adminIds = adminIds.filter((id: string) => id !== exclude_user_id);
+    }
 
     if (adminIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), {
