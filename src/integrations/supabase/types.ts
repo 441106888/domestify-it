@@ -200,10 +200,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      increment_points: {
-        Args: { _amount: number; _user_id: string }
-        Returns: undefined
-      }
+      increment_points:
+        | { Args: { _amount: number; _user_id: string }; Returns: undefined }
+        | { Args: { _amount: number; _user_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "member"
