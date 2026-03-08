@@ -1137,7 +1137,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <main className="p-4 max-w-7xl mx-auto space-y-6">
+      <main className="p-3 sm:p-4 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-8">
         <AnimatePresence mode="wait">
 
           {/* === OVERVIEW === */}
