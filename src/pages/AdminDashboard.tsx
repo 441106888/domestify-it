@@ -443,10 +443,8 @@ export default function AdminDashboard() {
       } as any).eq("id", rejectingTask.id);
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: rejectingTask.assigned_to!, title: "تم رفض الإثبات ❌",
-        message: `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`,
-      });
+      await sendNotification(rejectingTask.assigned_to!, "تم رفض الإثبات ❌",
+        `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
 
       toast({ title: "تم رفض الإثبات وإعادة المهمة للعضو" });
       setRejectingTask(null);
