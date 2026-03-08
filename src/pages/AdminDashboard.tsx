@@ -324,6 +324,10 @@ export default function AdminDashboard() {
       toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة واختيار عضو واحد على الأقل", variant: "destructive" });
       return;
     }
+    if (new Date(newTask.deadline) <= new Date()) {
+      toast({ title: "خطأ", description: "لا يمكن تحديد موعد في الماضي", variant: "destructive" });
+      return;
+    }
     const points = parseInt(newTask.points as string) || 0;
     if (points <= 0) {
       toast({ title: "خطأ", description: "يرجى إدخال عدد النقاط", variant: "destructive" });
