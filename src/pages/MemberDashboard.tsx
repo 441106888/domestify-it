@@ -613,20 +613,30 @@ export default function MemberDashboard() {
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> تقريرك الشخصي</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-center">
+               <div className="grid grid-cols-3 gap-3 text-center">
                 <div><p className="text-2xl font-bold text-primary">{totalPointsEarned}</p><p className="text-xs text-muted-foreground">نقاط مكتسبة</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--success))]">{weekCompleted}</p><p className="text-xs text-muted-foreground">مكتملة هذا الأسبوع</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--warning))]">{completionRate}%</p><p className="text-xs text-muted-foreground">نسبة الإنجاز</p></div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={reportChartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <ReTooltip />
-                  <Bar dataKey="عدد" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-2 mt-3">
+                {reportChartData.filter(d => d.عدد > 0).map((d, i) => {
+                  const maxVal = Math.max(...reportChartData.map(x => x.عدد), 1);
+                  const pct = Math.max((d.عدد / maxVal) * 100, 5);
+                  const colors = ["hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--primary))", "hsl(var(--destructive))"];
+                  return (
+                    <div key={d.name} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{d.name}</span>
+                        <span className="font-bold">{d.عدد}</span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ delay: i * 0.1, duration: 0.5 }}
+                          className="h-full rounded-full" style={{ backgroundColor: colors[i] }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
