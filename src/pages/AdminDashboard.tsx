@@ -977,27 +977,6 @@ export default function AdminDashboard() {
                     <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>
                   )}
                   <div className="border-t pt-3 mt-3">
-                    <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
-                    <Card className="border-primary/20 bg-primary/5">
-                      <CardContent className="p-3 space-y-2">
-                        <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
-                        <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
-                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت (ما تحتاج تكتب البريد يدويًا)</p>
-                        <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-1"
-                          onClick={() => window.open(`https://t.me/taskhome_noti_bot?start=${user?.id ?? ""}`, "_blank")}
-                        >
-                          <Send className="h-4 w-4 ml-1" />
-                          فتح بوت تلقرام
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="border-t pt-3 mt-3">
                     <p className="text-sm font-bold text-muted-foreground mb-2">✉️ إرسال رسالة لعضو</p>
                     <Card className="border-accent/20">
                       <CardContent className="p-3 space-y-3">
@@ -1037,6 +1016,26 @@ export default function AdminDashboard() {
                         >
                           <Send className="h-4 w-4 ml-1" />
                           {sendingMsg ? "جاري الإرسال..." : "إرسال"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
+                    <Card className="border-primary/20 bg-primary/5">
+                      <CardContent className="p-3 space-y-2">
+                        <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
+                        <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
+                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت (ما تحتاج تكتب البريد يدويًا)</p>
+                        <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-1"
+                          onClick={() => window.open(`https://t.me/taskhome_noti_bot?start=${user?.id ?? ""}`, "_blank")}
+                        >
+                          <Send className="h-4 w-4 ml-1" />
+                          فتح بوت تلقرام
                         </Button>
                       </CardContent>
                     </Card>
