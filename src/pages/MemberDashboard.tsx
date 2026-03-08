@@ -185,13 +185,16 @@ export default function MemberDashboard() {
     // Leaderboard: fetch only members (users with member role)
     // Use edge function to get member list since RLS blocks cross-user role queries
     try {
-      const { data: memberData } = await supabase.functions.invoke("manage-members", {
+      const { data: memberData, error: fnError } = await supabase.functions.invoke("manage-members", {
         body: { action: "list" },
       });
+      if (fnError || memberData?.error) {
+        throw new Error("function error");
+      }
       const memberProfiles = (memberData?.members || []).sort((a: any, b: any) => (b.total_points || 0) - (a.total_points || 0));
       setLeaderboard(memberProfiles);
     } catch {
-      // Fallback: just show profiles  
+      // Fallback: just show profiles (works even if session issues)
       const { data: profiles } = await supabase.from("profiles").select("id, name, total_points, avatar_url");
       setLeaderboard((profiles || []).sort((a, b) => (b.total_points || 0) - (a.total_points || 0)) as any);
     }
