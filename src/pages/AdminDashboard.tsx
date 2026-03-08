@@ -906,7 +906,7 @@ export default function AdminDashboard() {
                 </Button>
               </SheetTrigger>
               <SheetContent className="overflow-y-auto">
-                <SheetHeader><SheetTitle>الإشعارات والتنبيهات</SheetTitle></SheetHeader>
+                <SheetHeader><SheetTitle>الإشعارات والتذكيرات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4 pb-6">
                   {pendingReviewTasks.length > 0 && (
                     <div className="space-y-2">
