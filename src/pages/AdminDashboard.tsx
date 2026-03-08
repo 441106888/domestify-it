@@ -885,9 +885,9 @@ export default function AdminDashboard() {
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent className="overflow-y-auto">
                 <SheetHeader><SheetTitle>التنبيهات</SheetTitle></SheetHeader>
-                <div className="space-y-3 mt-4">
+                <div className="space-y-3 mt-4 pb-6">
                   {pendingReviewTasks.length > 0 && pendingReviewTasks.map(t => {
                     const assignee = members.find(m => m.id === t.assigned_to);
                     return (
