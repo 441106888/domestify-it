@@ -101,8 +101,10 @@
     @apply border-border;
   }
 
-  html {
+  html, body {
     direction: rtl;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {

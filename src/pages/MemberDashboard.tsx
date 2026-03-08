@@ -357,7 +357,7 @@ export default function MemberDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto">
       <motion.header
         initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring" as const, stiffness: 200, damping: 20 }}
