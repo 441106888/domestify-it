@@ -132,12 +132,9 @@ export default function AdminDashboard() {
     if (user && role === "admin") loadData();
   }, [user, role]);
 
-  // Check if current admin is also a member
+  // Admin is always also a member
   useEffect(() => {
-    if (user) {
-      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "member").maybeSingle()
-        .then(({ data }) => setAdminIsMember(!!data));
-    }
+    setAdminIsMember(true);
   }, [user]);
 
   const loadData = async () => {

@@ -131,15 +131,7 @@ export default function MemberDashboard() {
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
-    // Allow access if user has member role (even if also admin)
-    if (!loading && user && role !== "member") {
-      // Check if user has member role too
-      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "member").maybeSingle()
-        .then(({ data }) => {
-          if (!data) navigate("/");
-        });
-    }
-  }, [user, role, loading, navigate]);
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) {
