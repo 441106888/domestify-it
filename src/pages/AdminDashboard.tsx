@@ -559,7 +559,12 @@ export default function AdminDashboard() {
   ].filter(d => d.value > 0);
 
   const getRankIcon = (index: number) => {
-    if (index === 0) return <Crown className="h-6 w-6 text-[hsl(var(--gold))]" />;
+    if (index === 0) return (
+      <div className="flex items-center gap-0.5">
+        <Crown className="h-6 w-6 text-[hsl(var(--gold))]" />
+        <span className="font-bold text-sm text-[hsl(var(--gold))]">1</span>
+      </div>
+    );
     if (index === 1) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-5 w-5 text-[hsl(var(--silver))]" />
