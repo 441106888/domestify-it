@@ -1514,14 +1514,16 @@ export default function AdminDashboard() {
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
+                                <div className="flex items-center gap-1 flex-shrink-0 sm:flex-row flex-col">
+                                  <Badge className="text-[10px] sm:text-xs whitespace-nowrap" variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
                                     {task.status === "completed" ? "مكتملة" : isPendingReview ? "بانتظار الموافقة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
                                   </Badge>
-                                  {task.status === "pending" && (
-                                    <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
-                                  )}
-                                  <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  <div className="flex items-center">
+                                    {task.status === "pending" && (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  </div>
                                 </div>
                               </div>
                             </CardContent>
