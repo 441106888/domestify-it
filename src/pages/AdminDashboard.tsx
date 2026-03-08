@@ -126,7 +126,7 @@ export default function AdminDashboard() {
   const [adminIsMember, setAdminIsMember] = useState(false);
   const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
   const [showTelegramBanner, setShowTelegramBanner] = useState(false);
-  const [msgTo, setMsgTo] = useState("");
+  const [msgTo, setMsgTo] = useState<string[]>([]);
   const [msgText, setMsgText] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
 
@@ -980,16 +980,33 @@ export default function AdminDashboard() {
                     <p className="text-sm font-bold text-muted-foreground mb-2">✉️ إرسال رسالة لعضو</p>
                     <Card className="border-accent/20">
                       <CardContent className="p-3 space-y-3">
-                        <select
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={msgTo}
-                          onChange={e => setMsgTo(e.target.value)}
-                        >
-                          <option value="">اختر العضو...</option>
+                        <div className="space-y-1 max-h-[140px] overflow-y-auto border border-input rounded-md p-2">
+                          <label className="flex items-center gap-2 text-sm cursor-pointer pb-1 border-b border-border mb-1">
+                            <input
+                              type="checkbox"
+                              checked={msgTo.length === members.length && members.length > 0}
+                              onChange={e => setMsgTo(e.target.checked ? members.map(m => m.id) : [])}
+                              className="rounded"
+                            />
+                            <span className="font-medium">تحديد الكل</span>
+                          </label>
                           {members.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
+                            <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={msgTo.includes(m.id)}
+                                onChange={e => {
+                                  setMsgTo(e.target.checked ? [...msgTo, m.id] : msgTo.filter(id => id !== m.id));
+                                }}
+                                className="rounded"
+                              />
+                              {m.name}
+                            </label>
                           ))}
-                        </select>
+                        </div>
+                        {msgTo.length > 0 && (
+                          <p className="text-xs text-muted-foreground">تم تحديد {msgTo.length} عضو</p>
+                        )}
                         <Textarea
                           placeholder="اكتب الرسالة..."
                           value={msgText}
@@ -999,13 +1016,15 @@ export default function AdminDashboard() {
                         <Button
                           size="sm"
                           className="w-full"
-                          disabled={!msgTo || !msgText.trim() || sendingMsg}
+                          disabled={msgTo.length === 0 || !msgText.trim() || sendingMsg}
                           onClick={async () => {
                             setSendingMsg(true);
                             try {
-                              await sendNotification(msgTo, "رسالة من الإدارة 📩", msgText.trim());
-                              toast({ title: "تم إرسال الرسالة بنجاح ✅" });
-                              setMsgTo("");
+                              for (const id of msgTo) {
+                                await sendNotification(id, "رسالة من الإدارة 📩", msgText.trim());
+                              }
+                              toast({ title: `تم إرسال الرسالة لـ ${msgTo.length} عضو بنجاح ✅` });
+                              setMsgTo([]);
                               setMsgText("");
                             } catch {
                               toast({ title: "خطأ في الإرسال", variant: "destructive" });
