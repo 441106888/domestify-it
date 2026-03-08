@@ -357,15 +357,15 @@ export default function MemberDashboard() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {isAlsoAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
-                <Shield className="h-4 w-4 ml-1" /> لوحة الأدمن
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-2 sm:px-3">
+                <Shield className="h-4 w-4 ml-1" /> الأدمن
               </Button>
             )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
                   <Bell className="h-5 w-5" />
                   <AnimatePresence>
                     {unreadNotifs > 0 && (
@@ -408,7 +408,9 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9">
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </motion.header>

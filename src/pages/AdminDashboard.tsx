@@ -100,7 +100,7 @@ export default function AdminDashboard() {
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [newTask, setNewTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: [] as string[], requires_proof: true });
+  const [newTask, setNewTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: [] as string[], requires_proof: false });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState({ title: "", description: "", points: "", deadline: "", assigned_to: "", requires_proof: true });
   const [submitting, setSubmitting] = useState(false);
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
         });
       }
       toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
-      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: true });
+      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: false });
       setShowAddTask(false);
       loadData();
     } catch (error: any) {
