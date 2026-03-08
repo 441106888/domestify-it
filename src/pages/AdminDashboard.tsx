@@ -294,6 +294,8 @@ export default function AdminDashboard() {
     try {
       if (deductPoints && deletingTask.points_awarded > 0 && deletingTask.assigned_to) {
         await supabase.rpc("increment_points", { _user_id: deletingTask.assigned_to, _amount: -deletingTask.points_awarded });
+        await sendNotification(deletingTask.assigned_to, "تم خصم نقاط ⚠️",
+          `تم خصم ${deletingTask.points_awarded} نقطة بسبب حذف مهمة: ${deletingTask.title}`);
       }
       // Delete related notifications for this task's assigned member
       if (deletingTask.assigned_to) {
