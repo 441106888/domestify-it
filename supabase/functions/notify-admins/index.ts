@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { title, message } = await req.json();
+    const { title, message, exclude_user_id } = await req.json();
 
     // Get all admin user IDs
     const { data: adminRoles } = await supabaseAdmin
