@@ -451,7 +451,7 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-10 w-10">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
