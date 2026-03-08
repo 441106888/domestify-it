@@ -346,20 +346,20 @@ export default function MemberDashboard() {
     { name: "غير مكتملة", عدد: failedTasks.length },
   ];
 
-  const getRankIcon = (index: number) => {
-    if (index === 0) return (
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return (
       <div className="flex items-center gap-0.5">
         <Crown className="h-5 w-5 text-[hsl(var(--gold))]" />
         <span className="font-bold text-xs text-[hsl(var(--gold))]">1</span>
       </div>
     );
-    if (index === 1) return (
+    if (rank === 2) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-4 w-4 text-[hsl(var(--silver))]" />
         <span className="font-bold text-xs text-[hsl(var(--silver))]">2</span>
       </div>
     );
-    if (index === 2) return (
+    if (rank === 3) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-4 w-4 text-[hsl(var(--bronze))]" />
         <span className="font-bold text-xs text-[hsl(var(--bronze))]">3</span>
