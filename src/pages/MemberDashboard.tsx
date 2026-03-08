@@ -629,20 +629,20 @@ export default function MemberDashboard() {
                             <p className="text-sm text-destructive">سبب الرفض السابق: {task.rejection_reason}</p>
                           </div>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
                             {task.requires_proof ? (
-                              <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
                                 <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                               </Button>
                             ) : (
-                              <Button size="sm" className="w-full" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
                                 <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                               </Button>
                             )}
                           </motion.div>
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
-                            <Button size="sm" variant="outline" className="w-full" onClick={() => setFailureTaskId(task.id)}>
+                            <Button size="sm" variant="outline" className="w-full text-xs sm:text-sm" onClick={() => setFailureTaskId(task.id)}>
                               <XCircle className="h-4 w-4" /> لم أتمكن
                             </Button>
                           </motion.div>
