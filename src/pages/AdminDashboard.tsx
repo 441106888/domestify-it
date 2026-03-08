@@ -870,7 +870,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {adminIsMember && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="h-10 px-3">
                 <Users className="h-4 w-4 ml-1" /> لوحة العضو
               </Button>
             )}
