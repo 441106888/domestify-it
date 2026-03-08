@@ -1349,7 +1349,7 @@ export default function AdminDashboard() {
 
               <div className="space-y-3">
                 {[...tasks].sort((a, b) => {
-                  const order: Record<string, number> = { pending_review: 0, completed: 1, failed: 2, deducted: 3, pending: 4 };
+                  const order: Record<string, number> = { pending_review: 0, pending: 1, completed: 2, failed: 3, deducted: 4 };
                   const oa = order[a.status] ?? 5;
                   const ob = order[b.status] ?? 5;
                   if (oa !== ob) return oa - ob;
