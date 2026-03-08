@@ -1271,7 +1271,8 @@ export default function AdminDashboard() {
                             <span className="font-medium flex-1">{m.name}</span>
                             <Badge variant="secondary">{m.total_points || 0} نقطة</Badge>
                           </motion.div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
