@@ -35,9 +35,15 @@ Deno.serve(async (req) => {
       );
 
       if (email) {
-        // Find user by email
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-        const targetUser = users?.find((u: any) => u.email === email);
+        // Find user by email directly
+        const { data: users, error } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .limit(1000);
+        
+        // Look up email in auth via admin API with pagination
+        const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+        const targetUser = authUsers?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
 
         if (targetUser) {
           await supabaseAdmin
