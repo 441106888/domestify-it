@@ -1752,7 +1752,7 @@ export default function AdminDashboard() {
       {/* Rejection reason dialog */}
       <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{rejectingTask?.requires_proof && rejectingTask?.proof_url ? "سبب رفض الإثبات" : "سبب الرفض"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {rejectionReasons.length > 0 && (
               <div>
