@@ -325,10 +325,9 @@ export default function AdminDashboard() {
         if (error) throw error;
         
         const memberName = members.find(m => m.id === memberId)?.name || "";
-        await supabase.from("notifications").insert({
-          user_id: memberId, title: "مهمة جديدة 📋",
-          message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`,
-        });
+        await sendNotification(memberId, "مهمة جديدة 📋",
+          `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`);
+      }
       }
       toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
       setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: false });
