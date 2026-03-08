@@ -413,12 +413,10 @@ export default function AdminDashboard() {
         await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: pointsAwarded });
       }
 
-      await supabase.from("notifications").insert({
-        user_id: task.assigned_to!, title: "تمت الموافقة على مهمتك ✅",
-        message: pointsAwarded > 0
+      await sendNotification(task.assigned_to!, "تمت الموافقة على مهمتك ✅",
+        pointsAwarded > 0
           ? `تم قبول مهمة "${task.title}" وحصلت على ${pointsAwarded} نقطة!`
-          : `تم قبول مهمة "${task.title}" لكن لم تحصل على نقاط لأن التنفيذ كان بعد الموعد النهائي.`,
-      });
+          : `تم قبول مهمة "${task.title}" لكن لم تحصل على نقاط لأن التنفيذ كان بعد الموعد النهائي.`);
 
       toast({ title: pointsAwarded > 0 ? `تمت الموافقة ومنح ${pointsAwarded} نقطة ✅` : "تمت الموافقة بدون نقاط (تأخر التنفيذ)" });
       loadData();
