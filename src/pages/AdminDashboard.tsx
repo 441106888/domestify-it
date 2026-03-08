@@ -914,7 +914,7 @@ export default function AdminDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-10 w-10"><LogOut className="h-5 w-5" /></Button>
           </div>
         </div>
       </motion.header>
