@@ -1127,8 +1127,8 @@ export default function AdminDashboard() {
             >
               <tab.icon className="h-4 w-4 flex-shrink-0" />
               <span className="hidden xs:inline sm:inline">{tab.label}</span>
-              {tab.id === "tasks" && pendingReviewTasks.length > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">{pendingReviewTasks.length}</span>
+              {tab.id === "tasks" && (pendingReviewTasks.length + failedTasks.length) > 0 && (
+                <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 animate-pulse">{pendingReviewTasks.length + failedTasks.length}</span>
               )}
               {activeTab === tab.id && (
                 <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" transition={{ type: "spring" as const, stiffness: 300, damping: 30 }} />
