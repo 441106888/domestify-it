@@ -961,7 +961,7 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   </div>
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && adminNotifications.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                 </div>
               </SheetContent>
             </Sheet>
