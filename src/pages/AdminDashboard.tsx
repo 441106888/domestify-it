@@ -480,10 +480,8 @@ export default function AdminDashboard() {
         assigned_to: newAssignee, status: "pending", failure_reason: null,
         points_awarded: 0, updated_at: new Date().toISOString(),
       }).eq("id", taskId);
-      await supabase.from("notifications").insert({
-        user_id: newAssignee, title: "مهمة محولة إليك 🔄",
-        message: `تم تحويل مهمة إليك`,
-      });
+      await sendNotification(newAssignee, "مهمة محولة إليك 🔄",
+        `تم تحويل مهمة إليك`);
       toast({ title: "تم تحويل المهمة بنجاح" });
       setReassignTaskId(null); setReassignTo("");
       loadData();
