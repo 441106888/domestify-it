@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
     const appUrl = "https://domestify-it.lovable.app";
     const text = title ? `<b>${title}</b>\n\n${message}\n\n<a href="${appUrl}">🔗 افتح التطبيق</a>` : `${message}\n\n<a href="${appUrl}">🔗 افتح التطبيق</a>`;
 
+    console.log("Sending to chat_id:", profile.telegram_chat_id, "text length:", text.length);
+    
     const tgResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
     });
 
     const tgResult = await tgResponse.json();
-
+    console.log("Telegram API response:", JSON.stringify(tgResult));
     return new Response(JSON.stringify({ sent: tgResult.ok }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
