@@ -382,7 +382,7 @@ export default function AdminDashboard() {
       title: task.title,
       description: task.description || "",
       points: String(task.points),
-      deadline: task.deadline.slice(0, 16),
+      deadline: new Date(task.deadline).toLocaleString("sv-SE", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(" ", "T"),
       assigned_to: task.assigned_to || "",
       requires_proof: task.requires_proof,
     });
