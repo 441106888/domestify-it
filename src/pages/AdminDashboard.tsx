@@ -319,7 +319,7 @@ export default function AdminDashboard() {
       for (const memberId of newTask.assigned_to) {
         const { error } = await supabase.from("tasks").insert({
           title: newTask.title, description: newTask.description || null,
-          points, deadline: newTask.deadline,
+          points, deadline: newTask.deadline + ":00+03:00",
           assigned_to: memberId, created_by: user!.id,
           requires_proof: newTask.requires_proof,
         } as any);
