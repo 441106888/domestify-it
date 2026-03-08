@@ -1102,7 +1102,7 @@ export default function AdminDashboard() {
                                 <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
                               </Button>
                               <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
-                                <XCircle className="h-4 w-4" /> رفض الإثبات
+                                <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
                               </Button>
                             </div>
                           </motion.div>
