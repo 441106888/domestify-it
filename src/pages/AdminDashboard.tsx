@@ -459,8 +459,9 @@ export default function AdminDashboard() {
       } as any).eq("id", rejectingTask.id);
       if (error) throw error;
 
-      await sendNotification(rejectingTask.assigned_to!, "تم رفض الإثبات ❌",
-        `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
+      const isProofReject = rejectingTask.requires_proof && rejectingTask.proof_url;
+      await sendNotification(rejectingTask.assigned_to!, isProofReject ? "تم رفض الإثبات ❌" : "تم رفض المهمة ❌",
+        isProofReject ? `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}` : `تم رفض مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
 
       toast({ title: "تم رفض الإثبات وإعادة المهمة للعضو" });
       setRejectingTask(null);
