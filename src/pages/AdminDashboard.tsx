@@ -1483,16 +1483,16 @@ export default function AdminDashboard() {
                                   {task.rejection_reason && <p className="text-sm text-destructive mt-1 flex items-center gap-1">سبب الرفض: {task.rejection_reason}</p>}
                                   
                                   {isPendingReview && (
-                                    <div className="flex gap-2 mt-3 items-center">
+                                    <div className="flex flex-wrap gap-2 mt-3 items-center">
                                       {task.proof_url && (
                                         <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
-                                          <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                                          <Button variant="outline" size="sm" className="text-xs"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
                                         </a>
                                       )}
-                                      <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
+                                      <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
                                         <CheckCircle2 className="h-4 w-4" /> قبول
                                       </Button>
-                                      <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
+                                      <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
                                         <XCircle className="h-4 w-4" /> رفض
                                       </Button>
                                     </div>
