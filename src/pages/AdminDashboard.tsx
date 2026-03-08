@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { sendNotification } from "@/lib/telegram";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
