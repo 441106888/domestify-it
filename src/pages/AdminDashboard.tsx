@@ -1459,7 +1459,7 @@ export default function AdminDashboard() {
                         <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" layout>
                           <Card className={isPendingReview ? "border-primary/50" : isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
                             <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-2 sm:gap-3">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
