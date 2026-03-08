@@ -807,7 +807,7 @@ export default function AdminDashboard() {
 
         {/* Rejection dialog - in member detail */}
         <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
             <div className="space-y-4">
               {rejectionReasons.length > 0 && (
