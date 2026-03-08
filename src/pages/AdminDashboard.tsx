@@ -927,12 +927,12 @@ export default function AdminDashboard() {
             )}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9">
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                   <AnimatePresence>
                     {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
                         {failedTasks.length + pendingReviewTasks.length}
                       </motion.span>
                     )}
