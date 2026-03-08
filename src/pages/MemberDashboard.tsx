@@ -734,7 +734,7 @@ export default function MemberDashboard() {
 
       {/* Failure reason dialog */}
       <Dialog open={!!failureTaskId && !proofTaskId} onOpenChange={() => { setFailureTaskId(null); setFailureReason(""); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>سبب عدم تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />
