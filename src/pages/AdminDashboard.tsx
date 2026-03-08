@@ -1184,23 +1184,21 @@ export default function AdminDashboard() {
                         const assignee = members.find(m => m.id === task.assigned_to);
                         return (
                           <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold">{task.title}</p>
-                                <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
-                              </div>
-                              {task.proof_url && (
-                                <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
-                                </a>
-                              )}
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
                             </div>
+                            {task.proof_url && (
+                              <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="text-xs"><ImageIcon className="h-3.5 w-3.5" /> الإثبات</Button>
+                              </a>
+                            )}
                             <div className="flex flex-wrap gap-2">
-                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
-                                <CheckCircle2 className="h-4 w-4" /> قبول
+                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs flex-1 min-w-[120px]">
+                                <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
-                                <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
+                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs flex-1 min-w-[80px]">
+                                <XCircle className="h-4 w-4" /> رفض
                               </Button>
                             </div>
                           </motion.div>
