@@ -271,6 +271,10 @@ export default function AdminDashboard() {
       const { data, error } = await supabase.functions.invoke("manage-members", { body });
       if (error || data?.error) throw new Error(data?.error || "فشل التعديل");
       toast({ title: "تم تعديل بيانات العضو بنجاح ✅" });
+      // Update selectedMember if we're editing the currently viewed member
+      if (selectedMember && selectedMember.id === editingMember.id) {
+        setSelectedMember({ ...selectedMember, name: editMemberName || selectedMember.name });
+      }
       setEditingMember(null);
       loadData();
     } catch (error: any) {
