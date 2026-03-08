@@ -1436,7 +1436,13 @@ export default function AdminDashboard() {
                 <Card>
                   <CardHeader><CardTitle>مقارنة الأعضاء</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    {members.map((m, i) => {
+                    {[...members].sort((a, b) => {
+                      const aT = tasks.filter(t => t.assigned_to === a.id);
+                      const bT = tasks.filter(t => t.assigned_to === b.id);
+                      const aR = aT.length > 0 ? aT.filter(t => t.status === "completed").length / aT.length : 0;
+                      const bR = bT.length > 0 ? bT.filter(t => t.status === "completed").length / bT.length : 0;
+                      return bR - aR;
+                    }).map((m, i) => {
                       const mTasks = tasks.filter(t => t.assigned_to === m.id);
                       const mCompleted = mTasks.filter(t => t.status === "completed").length;
                       const mRate = mTasks.length > 0 ? Math.round((mCompleted / mTasks.length) * 100) : 0;
