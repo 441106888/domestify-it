@@ -161,6 +161,17 @@ export default function MemberDashboard() {
     }
   }, []);
 
+  // Show Telegram banner once on first visit
+  useEffect(() => {
+    if (user) {
+      const key = `telegram_banner_shown_${user.id}`;
+      if (!localStorage.getItem(key)) {
+        setShowTelegramBanner(true);
+        localStorage.setItem(key, "1");
+      }
+    }
+  }, [user]);
+
   // Watch for new notifications and send browser notification
   const prevNotifCountRef = useRef(0);
   useEffect(() => {
