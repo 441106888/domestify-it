@@ -124,6 +124,14 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    font-size: 17px;
+  }
+
+  /* Restore default on larger screens */
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px;
+    }
   }
 
   /* Better scrolling on mobile */
