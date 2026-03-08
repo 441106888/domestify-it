@@ -1766,7 +1766,7 @@ export default function AdminDashboard() {
             )}
             <Textarea placeholder="اكتب سبب الرفض..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} />
             <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full">
-              {submitting ? "جاري الرفض..." : "رفض الإثبات"}
+              {submitting ? "جاري الرفض..." : (rejectingTask?.requires_proof && rejectingTask?.proof_url ? "رفض الإثبات" : "رفض")}
             </Button>
           </div>
         </DialogContent>
