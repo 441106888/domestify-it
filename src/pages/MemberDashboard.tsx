@@ -687,7 +687,7 @@ export default function MemberDashboard() {
 
       {/* Proof upload dialog */}
       <Dialog open={!!proofTaskId} onOpenChange={() => setProofTaskId(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>إرفاق إثبات تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">يرجى إرفاق صورة أو فيديو كإثبات على تنفيذ المهمة. سيتم مراجعتها من قبل الأدمن قبل منح النقاط.</p>
