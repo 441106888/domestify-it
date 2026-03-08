@@ -257,7 +257,6 @@ export default function MemberDashboard() {
         body: {
           title: "إثبات مهمة جديد 📸",
           message: `${memberName} أرسل إثبات لمهمة: "${task.title}"`,
-          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
