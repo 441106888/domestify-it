@@ -1583,7 +1583,7 @@ export default function AdminDashboard() {
                         <p className="text-xs sm:text-sm text-muted-foreground">{tasks.filter(t => t.assigned_to === m.id && t.status === "completed").length} مهمة مكتملة</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-primary">{m.total_points || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-primary">{m.total_points || 0}</p>
                         <p className="text-xs text-muted-foreground">نقطة</p>
                       </div>
                     </CardContent>
