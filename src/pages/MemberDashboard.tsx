@@ -380,9 +380,9 @@ export default function MemberDashboard() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {isAlsoAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-2 sm:px-3">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-3 h-10">
                 <Shield className="h-4 w-4 ml-1" /> الأدمن
               </Button>
             )}
