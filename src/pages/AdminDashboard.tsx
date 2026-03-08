@@ -988,7 +988,7 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 space-y-2">
                         <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
                         <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
-                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت</p>
+                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت (ما تحتاج تكتب البريد يدويًا)</p>
                         <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
                         <Button
                           variant="outline"
