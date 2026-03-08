@@ -323,7 +323,16 @@ export default function MemberDashboard() {
   const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
-  const myRank = leaderboard.findIndex(m => m.id === user?.id) + 1;
+  // Dense ranking: same points = same rank
+  const getRank = (index: number) => {
+    if (index === 0) return 1;
+    if ((leaderboard[index]?.total_points || 0) === (leaderboard[index - 1]?.total_points || 0)) {
+      return getRank(index - 1);
+    }
+    return index + 1;
+  };
+  const myIndex = leaderboard.findIndex(m => m.id === user?.id);
+  const myRank = myIndex >= 0 ? getRank(myIndex) : 0;
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
