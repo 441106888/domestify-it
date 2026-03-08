@@ -1123,10 +1123,10 @@ export default function AdminDashboard() {
         <div className="flex gap-0 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0 ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0 ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <tab.icon className="h-4 w-4 flex-shrink-0" />
-              <span className="text-[0.65rem] sm:text-sm">{tab.label}</span>
+              <tab.icon className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-[0.6rem] sm:text-sm leading-tight">{tab.label}</span>
               {tab.id === "tasks" && (pendingReviewTasks.length + failedTasks.length) > 0 && (
                 <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 animate-pulse">{pendingReviewTasks.length + failedTasks.length}</span>
               )}
