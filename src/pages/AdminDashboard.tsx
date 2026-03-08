@@ -1087,7 +1087,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">الأعضاء ({members.length})</h2>
                 <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> إضافة عضو</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>إضافة عضو جديد</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <Input placeholder="اسم العضو" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} />
