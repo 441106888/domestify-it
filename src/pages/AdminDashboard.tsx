@@ -138,6 +138,11 @@ export default function AdminDashboard() {
   // Admin is always also a member
   useEffect(() => {
     setAdminIsMember(true);
+    const key = `telegram_banner_shown_${user?.id}`;
+    if (user && !localStorage.getItem(key)) {
+      setShowTelegramBanner(true);
+      localStorage.setItem(key, "1");
+    }
   }, [user]);
 
   const loadData = async () => {
