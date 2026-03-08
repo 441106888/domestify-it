@@ -329,7 +329,7 @@ export default function AdminDashboard() {
         });
       }
       toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
-      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: true });
+      setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: false });
       setShowAddTask(false);
       loadData();
     } catch (error: any) {
