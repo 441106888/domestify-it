@@ -1621,7 +1621,7 @@ export default function AdminDashboard() {
 
       {/* Edit member dialog */}
       <Dialog open={!!editingMember} onOpenChange={() => setEditingMember(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تعديل بيانات العضو</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
