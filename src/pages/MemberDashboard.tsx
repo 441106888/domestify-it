@@ -257,6 +257,7 @@ export default function MemberDashboard() {
         body: {
           title: "إثبات مهمة جديد 📸",
           message: `${memberName} أرسل إثبات لمهمة: "${task.title}"`,
+          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
@@ -284,6 +285,7 @@ export default function MemberDashboard() {
         body: {
           title: "مهمة مكتملة ✅",
           message: `${memberName} أكمل مهمة: "${task?.title || ""}"`,
+          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
