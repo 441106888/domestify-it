@@ -1194,11 +1194,11 @@ export default function AdminDashboard() {
                                 </a>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
-                                <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
+                                <CheckCircle2 className="h-4 w-4" /> قبول
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
+                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
                                 <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
                               </Button>
                             </div>
