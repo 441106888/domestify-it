@@ -430,12 +430,12 @@ export default function MemberDashboard() {
               <AvatarImage src={profile?.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-lg font-bold">مرحباً، {profile?.name} 👋</h1>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold truncate">مرحباً، {profile?.name} 👋</h1>
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                 <motion.span className="flex items-center gap-1" key={profile?.total_points}
                   initial={{ scale: 1.3, color: "hsl(var(--gold))" }} animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}>
-                  <Star className="h-4 w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
+                  <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
                 </motion.span>
                 {myRank > 0 && <span>المركز #{myRank}</span>}
               </div>
