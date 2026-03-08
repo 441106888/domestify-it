@@ -132,6 +132,44 @@ export default function MemberDashboard() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
   const [showTelegramBanner, setShowTelegramBanner] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [loadingEmail, setLoadingEmail] = useState(false);
+
+  const openEditProfile = async () => {
+    setShowEditProfile(true);
+    setEditName(profile?.name || "");
+    setEditPassword("");
+    setLoadingEmail(true);
+    try {
+      const { data } = await supabase.functions.invoke("manage-members", {
+        body: { action: "get_email", member_id: user?.id },
+      });
+      setEditEmail(data?.email || "");
+    } catch { setEditEmail(""); }
+    finally { setLoadingEmail(false); }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setSubmitting(true);
+    try {
+      const body: any = { action: "update", member_id: user.id };
+      if (editName && editName !== profile?.name) body.name = editName;
+      if (editEmail) body.email = editEmail;
+      if (editPassword && editPassword.length >= 6) body.password = editPassword;
+      const { data, error } = await supabase.functions.invoke("manage-members", { body });
+      if (error || data?.error) throw new Error(data?.error || "فشل التعديل");
+      toast({ title: "تم تعديل بياناتك بنجاح ✅" });
+      setShowEditProfile(false);
+      // Refresh page to update profile
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
