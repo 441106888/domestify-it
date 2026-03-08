@@ -128,6 +128,7 @@ export default function MemberDashboard() {
   const proofInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
+  const [showTelegramBanner, setShowTelegramBanner] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
