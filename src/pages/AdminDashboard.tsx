@@ -906,32 +906,33 @@ export default function AdminDashboard() {
   // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
-      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 max-w-7xl mx-auto gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate">لوحة التحكم</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">مرحباً، {profile?.name}</p>
+              <h1 className="text-sm sm:text-lg font-bold truncate leading-tight">لوحة التحكم</h1>
+              <p className="text-[11px] sm:text-sm text-muted-foreground truncate leading-tight">مرحباً، {profile?.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
             {adminIsMember && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-xs sm:text-sm px-2 sm:px-3">
-                <Users className="h-4 w-4 ml-1" /> لوحة العضو
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline mr-1">لوحة العضو</span>
               </Button>
             )}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9">
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                   <AnimatePresence>
                     {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
                         {failedTasks.length + pendingReviewTasks.length}
                       </motion.span>
                     )}
@@ -1067,10 +1068,10 @@ export default function AdminDashboard() {
               if (user && profile) {
                 openEditMember({ id: user.id, name: profile.name, avatar_url: profile.avatar_url, total_points: profile.total_points } as Member);
               }
-            }} className="h-9 w-9">
-              <Edit className="h-5 w-5" />
+            }} className="h-8 w-8 sm:h-9 sm:w-9">
+              <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9"><LogOut className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 sm:h-9 sm:w-9"><LogOut className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
           </div>
         </div>
       </motion.header>
@@ -1177,29 +1178,27 @@ export default function AdminDashboard() {
               {pendingReviewTasks.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                   <Card className="border-primary/50">
-                    <CardHeader><CardTitle className="flex items-center gap-2 text-primary"><ImageIcon className="h-5 w-5" /> مهام بانتظار موافقتك ({pendingReviewTasks.length})</CardTitle></CardHeader>
+                    <CardHeader className="pb-2 sm:pb-4"><CardTitle className="flex items-center gap-2 text-primary text-sm sm:text-base"><ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" /> مهام بانتظار موافقتك ({pendingReviewTasks.length})</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       {pendingReviewTasks.map((task, i) => {
                         const assignee = members.find(m => m.id === task.assigned_to);
                         return (
                           <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold">{task.title}</p>
-                                <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
-                              </div>
-                              {task.proof_url && (
-                                <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
-                                </a>
-                              )}
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
                             </div>
+                            {task.proof_url && (
+                              <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="text-xs"><ImageIcon className="h-3.5 w-3.5" /> الإثبات</Button>
+                              </a>
+                            )}
                             <div className="flex flex-wrap gap-2">
-                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
-                                <CheckCircle2 className="h-4 w-4" /> قبول
+                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs flex-1 min-w-[120px]">
+                                <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
-                                <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
+                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs flex-1 min-w-[80px]">
+                                <XCircle className="h-4 w-4" /> رفض
                               </Button>
                             </div>
                           </motion.div>
@@ -1213,28 +1212,26 @@ export default function AdminDashboard() {
               {failedTasks.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                   <Card className="border-destructive/50">
-                    <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" /> مهام بانتظار قرارك ({failedTasks.length})</CardTitle></CardHeader>
+                    <CardHeader className="pb-2 sm:pb-4"><CardTitle className="flex items-center gap-2 text-destructive text-sm sm:text-base"><AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" /> مهام بانتظار قرارك ({failedTasks.length})</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       {failedTasks.map((task, i) => {
                         const assignee = members.find(m => m.id === task.assigned_to);
                         return (
                           <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold">{task.title}</p>
-                                <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
-                                {task.failure_reason && <p className="text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
-                              </div>
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                              {task.failure_reason && <p className="text-xs sm:text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">
-                                <XCircle className="h-4 w-4" /> خصم النقاط
+                            <div className="grid grid-cols-3 gap-2">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
+                                <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">
-                                <RefreshCw className="h-4 w-4" /> تحويل لآخر
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">
+                                <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs">
-                                <Trash2 className="h-4 w-4 text-destructive" /> حذف
+                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20">
+                                <Trash2 className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> حذف
                               </Button>
                             </div>
                           </motion.div>
@@ -1499,10 +1496,10 @@ export default function AdminDashboard() {
                                   )}
 
                                   {task.status === "failed" && (
-                                    <div className="flex flex-wrap gap-2 mt-3">
-                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">خصم النقاط</Button>
-                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">تحويل لآخر</Button>
-                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs"><Trash2 className="h-4 w-4 text-destructive" /> حذف</Button>
+                                    <div className="grid grid-cols-3 gap-2 mt-3">
+                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">خصم النقاط</Button>
+                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">تحويل لآخر</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20"><Trash2 className="h-3.5 w-3.5 text-destructive" /> حذف</Button>
                                     </div>
                                   )}
 
