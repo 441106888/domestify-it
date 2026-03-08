@@ -1168,7 +1168,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">المهام ({tasks.length})</h2>
                 <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> مهمة جديدة</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>إضافة مهمة جديدة</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
@@ -1562,7 +1562,7 @@ export default function AdminDashboard() {
 
       {/* Edit task dialog */}
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تعديل المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
