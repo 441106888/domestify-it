@@ -399,7 +399,7 @@ export default function AdminDashboard() {
       if (completedAt <= deadline) {
         pointsAwarded = task.points;
       } else if (completedAt <= endOfDeadlineDay) {
-        pointsAwarded = Math.floor(task.points / 2);
+        pointsAwarded = Math.ceil(task.points / 2);
       } else {
         pointsAwarded = 0;
       }
