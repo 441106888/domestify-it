@@ -641,7 +641,7 @@ export default function AdminDashboard() {
 
     return (
       <div className="min-h-screen bg-background overflow-y-auto">
-        <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+        <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
           <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
             <Button variant="ghost" onClick={() => setSelectedMember(null)}><ArrowLeft className="h-5 w-5 ml-1" /> رجوع</Button>
             <div className="flex gap-2">
@@ -906,16 +906,16 @@ export default function AdminDashboard() {
   // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
-      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
+      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={profile?.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-lg font-bold">لوحة التحكم</h1>
-              <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold truncate">لوحة التحكم</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">مرحباً، {profile?.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -1117,17 +1117,17 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Tabs */}
+      {/* Tabs - scrollable on mobile */}
       <div className="border-b bg-card">
-        <div className="flex gap-1 px-4 max-w-7xl mx-auto overflow-x-auto">
+        <div className="flex gap-0 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0 ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <tab.icon className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden xs:inline sm:inline">{tab.label}</span>
               {tab.id === "tasks" && pendingReviewTasks.length > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">{pendingReviewTasks.length}</span>
+                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">{pendingReviewTasks.length}</span>
               )}
               {activeTab === tab.id && (
                 <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" transition={{ type: "spring" as const, stiffness: 300, damping: 30 }} />
@@ -1137,13 +1137,13 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <main className="p-4 max-w-7xl mx-auto space-y-6">
+      <main className="p-3 sm:p-4 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-8">
         <AnimatePresence mode="wait">
 
           {/* === OVERVIEW === */}
           {activeTab === "overview" && (
             <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
                 {[
                   { value: members.length, label: "الأعضاء", color: "text-primary", clickAction: () => { setActiveTab("members"); } },
                   { value: tasks.length, label: "إجمالي المهام", color: "text-primary", tasks: tasks },
@@ -1164,10 +1164,10 @@ export default function AdminDashboard() {
                       }}
                     >
                       <CardContent className="p-4 text-center">
-                        <motion.p className={`text-3xl font-bold ${stat.color}`} key={stat.value} initial={{ scale: 1.3 }} animate={{ scale: 1 }}>
+                        <motion.p className={`text-2xl sm:text-3xl font-bold ${stat.color}`} key={stat.value} initial={{ scale: 1.3 }} animate={{ scale: 1 }}>
                           {stat.value}
                         </motion.p>
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -1194,11 +1194,11 @@ export default function AdminDashboard() {
                                 </a>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
-                                <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
+                                <CheckCircle2 className="h-4 w-4" /> قبول
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
+                              <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
                                 <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
                               </Button>
                             </div>
@@ -1226,14 +1226,14 @@ export default function AdminDashboard() {
                                 {task.failure_reason && <p className="text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">
                                 <XCircle className="h-4 w-4" /> خصم النقاط
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">
                                 <RefreshCw className="h-4 w-4" /> تحويل لآخر
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)}>
+                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs">
                                 <Trash2 className="h-4 w-4 text-destructive" /> حذف
                               </Button>
                             </div>
@@ -1305,7 +1305,7 @@ export default function AdminDashboard() {
                 </Dialog>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {members.map((m, i) => {
                   const memberTasks = tasks.filter(t => t.assigned_to === m.id);
                   const memberCompleted = memberTasks.filter(t => t.status === "completed").length;
@@ -1459,7 +1459,7 @@ export default function AdminDashboard() {
                         <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" layout>
                           <Card className={isPendingReview ? "border-primary/50" : isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
                             <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-2 sm:gap-3">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
@@ -1472,37 +1472,37 @@ export default function AdminDashboard() {
                                     {isGrouped && assignee && <h3 className="font-bold">{assignee.name}</h3>}
                                   </div>
                                   {!isGrouped && task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-2 text-xs">
-                                    {!isGrouped && <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>}
-                                    {!isGrouped && assignee && <Badge variant="secondary" className="font-bold text-sm">{assignee.name}</Badge>}
-                                    {!isGrouped && <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>}
-                                    {!isGrouped && !task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
-                                    {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs">
+                                    {!isGrouped && <Badge variant="outline" className="text-[10px] sm:text-xs"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>}
+                                    {!isGrouped && assignee && <Badge variant="secondary" className="font-bold text-xs sm:text-sm">{assignee.name}</Badge>}
+                                    {!isGrouped && <Badge className="bg-primary/10 text-primary text-[10px] sm:text-xs">{task.points} نقطة</Badge>}
+                                    {!isGrouped && !task.requires_proof && <Badge variant="outline" className="text-[10px] sm:text-xs">بدون إثبات</Badge>}
+                                    {task.points_awarded !== 0 && <Badge className={`text-[10px] sm:text-xs ${task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}`}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
                                   </div>
                                   {task.failure_reason && <p className="text-sm text-destructive mt-2 flex items-center gap-1"><XCircle className="h-4 w-4" /> {task.failure_reason}</p>}
                                   {task.rejection_reason && <p className="text-sm text-destructive mt-1 flex items-center gap-1">سبب الرفض: {task.rejection_reason}</p>}
                                   
                                   {isPendingReview && (
-                                    <div className="flex gap-2 mt-3 items-center">
+                                    <div className="flex flex-wrap gap-2 mt-3 items-center">
                                       {task.proof_url && (
                                         <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
-                                          <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                                          <Button variant="outline" size="sm" className="text-xs"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
                                         </a>
                                       )}
-                                      <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
+                                      <Button size="sm" onClick={() => approveTask(task)} disabled={submitting} className="text-xs">
                                         <CheckCircle2 className="h-4 w-4" /> قبول
                                       </Button>
-                                      <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
+                                      <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting} className="text-xs">
                                         <XCircle className="h-4 w-4" /> رفض
                                       </Button>
                                     </div>
                                   )}
 
                                   {task.status === "failed" && (
-                                    <div className="flex gap-2 mt-3">
-                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>خصم النقاط</Button>
-                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>تحويل لآخر</Button>
-                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /> حذف</Button>
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">خصم النقاط</Button>
+                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">تحويل لآخر</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs"><Trash2 className="h-4 w-4 text-destructive" /> حذف</Button>
                                     </div>
                                   )}
 
@@ -1514,14 +1514,16 @@ export default function AdminDashboard() {
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
+                                <div className="flex items-center gap-1 flex-shrink-0 sm:flex-row flex-col">
+                                  <Badge className="text-[10px] sm:text-xs whitespace-nowrap" variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
                                     {task.status === "completed" ? "مكتملة" : isPendingReview ? "بانتظار الموافقة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
                                   </Badge>
-                                  {task.status === "pending" && (
-                                    <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
-                                  )}
-                                  <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  <div className="flex items-center">
+                                    {task.status === "pending" && (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  </div>
                                 </div>
                               </div>
                             </CardContent>
@@ -1569,19 +1571,19 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold flex items-center gap-2"><Trophy className="text-[hsl(var(--gold))]" /> لوحة المتصدرين</h2>
               {sortedMembers.map((m, i) => (
                 <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-                  <Card className={getMemberRank(i) <= 3 ? "border-2 " + (getMemberRank(i) === 1 ? "border-[hsl(var(--gold))]" : getMemberRank(i) === 2 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}>
-                    <CardContent className="p-4 flex items-center gap-4">
+                  <Card className={`${getMemberRank(i) <= 3 ? "border-2 " + (getMemberRank(i) === 1 ? "border-[hsl(var(--gold))]" : getMemberRank(i) === 2 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}`}>
+                    <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
                       <div className="text-center w-12">{getRankIcon(getMemberRank(i))}</div>
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={m.avatar_url || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{m.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg">{m.name}</h3>
-                        <p className="text-sm text-muted-foreground">{tasks.filter(t => t.assigned_to === m.id && t.status === "completed").length} مهمة مكتملة</p>
+                        <h3 className="font-bold text-base sm:text-lg">{m.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{tasks.filter(t => t.assigned_to === m.id && t.status === "completed").length} مهمة مكتملة</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-primary">{m.total_points || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-primary">{m.total_points || 0}</p>
                         <p className="text-xs text-muted-foreground">نقطة</p>
                       </div>
                     </CardContent>
@@ -1657,7 +1659,7 @@ export default function AdminDashboard() {
                     </Card>
 
                     {/* حالات المهام للفترة المحددة */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {[
                         { label: "مكتملة", value: fCompleted.length, icon: CheckCircle2, color: "hsl(var(--success))", tasks: fCompleted },
                         { label: "قيد التنفيذ", value: fPending.length, icon: Clock, color: "hsl(var(--warning))", tasks: fPending },
@@ -1786,7 +1788,7 @@ export default function AdminDashboard() {
                 </Dialog>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {admins.map((admin, i) => (
                   <motion.div key={admin.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
                     <Card className={admin.id === user?.id ? "border-primary/50" : ""}>

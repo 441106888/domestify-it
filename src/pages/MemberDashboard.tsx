@@ -422,20 +422,20 @@ export default function MemberDashboard() {
       <motion.header
         initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring" as const, stiffness: 200, damping: 20 }}
-        className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm"
+        className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top"
       >
-        <div className="flex items-center justify-between px-4 py-3 max-w-3xl mx-auto">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-3xl mx-auto">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={profile?.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-lg font-bold">مرحباً، {profile?.name} 👋</h1>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold truncate">مرحباً، {profile?.name} 👋</h1>
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                 <motion.span className="flex items-center gap-1" key={profile?.total_points}
                   initial={{ scale: 1.3, color: "hsl(var(--gold))" }} animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}>
-                  <Star className="h-4 w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
+                  <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
                 </motion.span>
                 {myRank > 0 && <span>المركز #{myRank}</span>}
               </div>
@@ -579,7 +579,7 @@ export default function MemberDashboard() {
         )}
       </AnimatePresence>
 
-      <main className="p-4 max-w-3xl mx-auto space-y-6">
+      <main className="p-3 sm:p-4 max-w-3xl mx-auto space-y-4 sm:space-y-6 pb-8">
         {/* Progress card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="overflow-hidden bg-gradient-to-l from-primary/5 to-transparent">
@@ -629,20 +629,20 @@ export default function MemberDashboard() {
                             <p className="text-sm text-destructive">سبب الرفض السابق: {task.rejection_reason}</p>
                           </div>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
                             {task.requires_proof ? (
-                              <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
                                 <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                               </Button>
                             ) : (
-                              <Button size="sm" className="w-full" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
                                 <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                               </Button>
                             )}
                           </motion.div>
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
-                            <Button size="sm" variant="outline" className="w-full" onClick={() => setFailureTaskId(task.id)}>
+                            <Button size="sm" variant="outline" className="w-full text-xs sm:text-sm" onClick={() => setFailureTaskId(task.id)}>
                               <XCircle className="h-4 w-4" /> لم أتمكن
                             </Button>
                           </motion.div>
@@ -777,7 +777,7 @@ export default function MemberDashboard() {
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> تقريرك الشخصي</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-               <div className="grid grid-cols-3 gap-3 text-center">
+               <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
                 <div><p className="text-2xl font-bold text-primary">{totalPointsEarned}</p><p className="text-xs text-muted-foreground">نقاط مكتسبة</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--success))]">{weekCompleted}</p><p className="text-xs text-muted-foreground">مكتملة هذا الأسبوع</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--warning))]">{completionRate}%</p><p className="text-xs text-muted-foreground">نسبة الإنجاز</p></div>
