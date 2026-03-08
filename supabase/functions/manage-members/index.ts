@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
             });
           }
           userId = existingUser.id;
-          await supabaseAdmin.auth.admin.updateUser(userId, { password, user_metadata: { name } });
+          await supabaseAdmin.auth.admin.updateUserById(userId, { password, user_metadata: { name } });
         } else {
           return new Response(JSON.stringify({ error: createError.message }), {
             status: 400,
