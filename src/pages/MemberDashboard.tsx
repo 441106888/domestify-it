@@ -400,9 +400,9 @@ export default function MemberDashboard() {
                   </AnimatePresence>
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent className="overflow-y-auto">
                 <SheetHeader><SheetTitle>الإشعارات والتذكيرات</SheetTitle></SheetHeader>
-                <div className="space-y-3 mt-4">
+                <div className="space-y-3 mt-4 pb-6">
                   {pendingTasks.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm font-bold text-primary">⏰ مهام تحتاج تنفيذ</p>
