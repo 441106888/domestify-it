@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
         user_id: admin.id,
         title,
         message,
+        context: "admin",
       });
 
       // Send Telegram if linked
