@@ -995,6 +995,13 @@ export default function AdminDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
+            <Button variant="ghost" size="icon" onClick={() => {
+              if (user && profile) {
+                openEditMember({ id: user.id, name: profile.name, avatar_url: profile.avatar_url, total_points: profile.total_points } as Member);
+              }
+            }} className="h-9 w-9">
+              <Edit className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9"><LogOut className="h-5 w-5" /></Button>
           </div>
         </div>
