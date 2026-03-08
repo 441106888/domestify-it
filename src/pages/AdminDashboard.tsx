@@ -1117,17 +1117,17 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Tabs */}
+      {/* Tabs - scrollable on mobile */}
       <div className="border-b bg-card">
-        <div className="flex gap-1 px-4 max-w-7xl mx-auto overflow-x-auto">
+        <div className="flex gap-0 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`relative flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0 ${activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <tab.icon className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden xs:inline sm:inline">{tab.label}</span>
               {tab.id === "tasks" && pendingReviewTasks.length > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">{pendingReviewTasks.length}</span>
+                <span className="bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">{pendingReviewTasks.length}</span>
               )}
               {activeTab === tab.id && (
                 <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" transition={{ type: "spring" as const, stiffness: 300, damping: 30 }} />
