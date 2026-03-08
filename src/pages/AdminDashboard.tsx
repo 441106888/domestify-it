@@ -562,7 +562,7 @@ export default function AdminDashboard() {
     if (index === 0) return <Crown className="h-6 w-6 text-[hsl(var(--gold))]" />;
     if (index === 1) return (
       <div className="flex items-center gap-0.5">
-        <Medal className="h-5 w-5 text-[hsl(var(--silver))]" />
+        <Award className="h-5 w-5 text-[hsl(var(--silver))]" />
         <span className="font-bold text-sm text-[hsl(var(--silver))]">2</span>
       </div>
     );
