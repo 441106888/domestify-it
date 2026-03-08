@@ -882,13 +882,19 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background overflow-y-auto">
       <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
-          <div>
-            <h1 className="text-xl font-bold">لوحة التحكم</h1>
-            <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-lg font-bold">لوحة التحكم</h1>
+              <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {adminIsMember && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-xs sm:text-sm px-2 sm:px-3">
                 <Users className="h-4 w-4 ml-1" /> لوحة العضو
               </Button>
             )}
@@ -902,13 +908,16 @@ export default function AdminDashboard() {
               }
             }}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
                   <Bell className="h-5 w-5" />
-                  {(failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length) > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length}
-                    </span>
-                  )}
+                  <AnimatePresence>
+                    {(failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length) > 0 && (
+                      <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </SheetTrigger>
               <SheetContent className="overflow-y-auto">
@@ -979,7 +988,7 @@ export default function AdminDashboard() {
                       <CardContent className="p-3 space-y-2">
                         <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
                         <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
-                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت</p>
+                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت (ما تحتاج تكتب البريد يدويًا)</p>
                         <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
                         <Button
                           variant="outline"
