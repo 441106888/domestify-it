@@ -1226,14 +1226,14 @@ export default function AdminDashboard() {
                                 {task.failure_reason && <p className="text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">
                                 <XCircle className="h-4 w-4" /> خصم النقاط
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">
                                 <RefreshCw className="h-4 w-4" /> تحويل لآخر
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)}>
+                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs">
                                 <Trash2 className="h-4 w-4 text-destructive" /> حذف
                               </Button>
                             </div>
