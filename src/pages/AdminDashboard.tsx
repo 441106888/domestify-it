@@ -1164,10 +1164,10 @@ export default function AdminDashboard() {
                       }}
                     >
                       <CardContent className="p-4 text-center">
-                        <motion.p className={`text-3xl font-bold ${stat.color}`} key={stat.value} initial={{ scale: 1.3 }} animate={{ scale: 1 }}>
+                        <motion.p className={`text-2xl sm:text-3xl font-bold ${stat.color}`} key={stat.value} initial={{ scale: 1.3 }} animate={{ scale: 1 }}>
                           {stat.value}
                         </motion.p>
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
                       </CardContent>
                     </Card>
                   </motion.div>
