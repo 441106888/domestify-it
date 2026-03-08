@@ -311,7 +311,7 @@ export default function MemberDashboard() {
     if (index === 0) return <Crown className="h-5 w-5 text-[hsl(var(--gold))]" />;
     if (index === 1) return (
       <div className="flex items-center gap-0.5">
-        <Medal className="h-4 w-4 text-[hsl(var(--silver))]" />
+        <Award className="h-4 w-4 text-[hsl(var(--silver))]" />
         <span className="font-bold text-xs text-[hsl(var(--silver))]">2</span>
       </div>
     );
