@@ -1579,8 +1579,8 @@ export default function AdminDashboard() {
                         <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{m.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg">{m.name}</h3>
-                        <p className="text-sm text-muted-foreground">{tasks.filter(t => t.assigned_to === m.id && t.status === "completed").length} مهمة مكتملة</p>
+                        <h3 className="font-bold text-base sm:text-lg">{m.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{tasks.filter(t => t.assigned_to === m.id && t.status === "completed").length} مهمة مكتملة</p>
                       </div>
                       <div className="text-center">
                         <p className="text-2xl font-bold text-primary">{m.total_points || 0}</p>
