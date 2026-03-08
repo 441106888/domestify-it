@@ -1659,7 +1659,7 @@ export default function AdminDashboard() {
                     </Card>
 
                     {/* حالات المهام للفترة المحددة */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {[
                         { label: "مكتملة", value: fCompleted.length, icon: CheckCircle2, color: "hsl(var(--success))", tasks: fCompleted },
                         { label: "قيد التنفيذ", value: fPending.length, icon: Clock, color: "hsl(var(--warning))", tasks: fPending },
