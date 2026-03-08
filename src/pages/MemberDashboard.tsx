@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +20,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send, Edit
 } from "lucide-react";
 
 interface Task {
@@ -129,6 +131,44 @@ export default function MemberDashboard() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
   const [showTelegramBanner, setShowTelegramBanner] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [loadingEmail, setLoadingEmail] = useState(false);
+
+  const openEditProfile = async () => {
+    setShowEditProfile(true);
+    setEditName(profile?.name || "");
+    setEditPassword("");
+    setLoadingEmail(true);
+    try {
+      const { data } = await supabase.functions.invoke("manage-members", {
+        body: { action: "get_email", member_id: user?.id },
+      });
+      setEditEmail(data?.email || "");
+    } catch { setEditEmail(""); }
+    finally { setLoadingEmail(false); }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setSubmitting(true);
+    try {
+      const body: any = { action: "update", member_id: user.id };
+      if (editName && editName !== profile?.name) body.name = editName;
+      if (editEmail) body.email = editEmail;
+      if (editPassword && editPassword.length >= 6) body.password = editPassword;
+      const { data, error } = await supabase.functions.invoke("manage-members", { body });
+      if (error || data?.error) throw new Error(data?.error || "فشل التعديل");
+      toast({ title: "تم تعديل بياناتك بنجاح ✅" });
+      setShowEditProfile(false);
+      // Refresh page to update profile
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
@@ -487,6 +527,9 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
+            <Button variant="ghost" size="icon" onClick={openEditProfile} className="h-9 w-9">
+              <Edit className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9">
               <LogOut className="h-5 w-5" />
             </Button>
@@ -818,6 +861,36 @@ export default function MemberDashboard() {
             <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />
             <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full">
               {submitting ? "جاري الإرسال..." : "إرسال السبب"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={showEditProfile} onOpenChange={setShowEditProfile}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعديل بياناتي</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2" dir="rtl">
+            <div>
+              <Label className="text-sm mb-1 block">الاسم</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">البريد الإلكتروني</Label>
+              {loadingEmail ? (
+                <p className="text-sm text-muted-foreground p-2">جاري التحميل...</p>
+              ) : (
+                <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} dir="ltr" type="email" />
+              )}
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">كلمة المرور الجديدة (اتركها فارغة إذا لا تريد تغييرها)</Label>
+              <Input value={editPassword} onChange={(e) => setEditPassword(e.target.value)} dir="ltr" type="password" placeholder="كلمة مرور جديدة" />
+            </div>
+            <Button onClick={saveProfile} disabled={submitting} className="w-full">
+              {submitting ? "جاري الحفظ..." : "حفظ التعديلات"}
             </Button>
           </div>
         </DialogContent>
