@@ -433,16 +433,17 @@ export default function MemberDashboard() {
                     <Card className="border-primary/20 bg-primary/5">
                       <CardContent className="p-3 space-y-2">
                         <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
-                        <p className="text-xs text-muted-foreground">اضغط الزر وسيتم تمرير معرفك تلقائياً للبوت بدون كتابة الإيميل.</p>
-                        <p className="text-xs text-muted-foreground">إذا فتح البوت بدون ربط، أرسل له /start مرة واحدة.</p>
+                        <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
+                        <p className="text-xs text-muted-foreground">2. أرسل للبوت: <code className="bg-muted px-1 rounded">/start بريدك@المسجل.com</code></p>
+                        <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full mt-1 h-11"
-                          onClick={() => window.open(`https://t.me/taskhome_noti_bot?start=${user?.id ?? ""}`, "_blank")}
+                          className="w-full mt-1"
+                          onClick={() => window.open("https://t.me/domestify_tasks_bot", "_blank")}
                         >
                           <Send className="h-4 w-4 ml-1" />
-                          فتح بوت تلقرام وربط الحساب
+                          فتح بوت تلقرام
                         </Button>
                       </CardContent>
                     </Card>
