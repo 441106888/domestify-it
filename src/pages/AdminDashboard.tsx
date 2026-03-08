@@ -1339,50 +1339,55 @@ export default function AdminDashboard() {
             <motion.div key="reports" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               <h2 className="text-xl font-bold">التقارير والإحصائيات</h2>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                  <Card>
-                    <CardHeader><CardTitle className="text-base">نقاط الأعضاء</CardTitle></CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={memberChartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <ReTooltip />
-                          <Bar dataKey="نقاط" fill="hsl(199, 89%, 38%)" radius={[4, 4, 0, 0]}>
-                            <LabelList dataKey="نقاط" position="top" style={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                  <Card>
-                    <CardHeader><CardTitle className="text-base">توزيع حالات المهام</CardTitle></CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <PieChart>
-                          <Pie data={statusPieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="value" paddingAngle={3} label={false}>
-                            {statusPieData.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}
-                          </Pie>
-                          <Legend verticalAlign="bottom" height={36} />
-                          <ReTooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="flex justify-center gap-4 mt-2">
-                        {statusPieData.map((d, idx) => (
-                          <div key={d.name} className="text-center">
-                            <p className="text-lg font-bold" style={{ color: CHART_COLORS[idx % CHART_COLORS.length] }}>{d.value}</p>
-                            <p className="text-xs text-muted-foreground">{d.name}</p>
-                          </div>
-                        ))}
+              {/* نقاط الأعضاء - بطاقات بسيطة */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">نقاط الأعضاء</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {[...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0)).map((m, i) => {
+                    const maxPoints = Math.max(...members.map(x => x.total_points || 1), 1);
+                    const pct = Math.max(((m.total_points || 0) / maxPoints) * 100, 2);
+                    return (
+                      <div key={m.id} className="space-y-1">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium flex items-center gap-2">
+                            <span className="text-muted-foreground w-5 text-center">{i + 1}</span>
+                            {m.name}
+                          </span>
+                          <span className="font-bold text-primary">{m.total_points || 0}</span>
+                        </div>
+                        <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ delay: i * 0.1, duration: 0.5 }}
+                            className="h-full bg-primary rounded-full"
+                          />
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                    );
+                  })}
+                  {members.length === 0 && <p className="text-center text-muted-foreground py-4">لا يوجد أعضاء</p>}
+                </CardContent>
+              </Card>
+
+              {/* توزيع حالات المهام - بطاقات ملونة */}
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "مكتملة", value: completedTasks.length, icon: CheckCircle2, color: "hsl(var(--success))", bg: "bg-[hsl(var(--success))]/10" },
+                  { label: "قيد التنفيذ", value: pendingTasks.length, icon: Clock, color: "hsl(var(--warning))", bg: "bg-[hsl(var(--warning))]/10" },
+                  { label: "بانتظار الموافقة", value: pendingReviewTasks.length, icon: ImageIcon, color: "hsl(var(--primary))", bg: "bg-primary/10" },
+                  { label: "غير مكتملة", value: incompleteTasks.length, icon: XCircle, color: "hsl(var(--destructive))", bg: "bg-destructive/10" },
+                ].map((item, i) => (
+                  <motion.div key={item.label} custom={i} variants={statCard} initial="hidden" animate="visible">
+                    <Card className="text-center">
+                      <CardContent className="p-4">
+                        <item.icon className="h-6 w-6 mx-auto mb-2" style={{ color: item.color }} />
+                        <p className="text-2xl font-bold" style={{ color: item.color }}>{item.value}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
