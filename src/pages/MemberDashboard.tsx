@@ -454,9 +454,9 @@ export default function MemberDashboard() {
           </div>
           <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
             {isAlsoAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9 flex items-center gap-1">
                 <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline mr-1">الأدمن</span>
+                <span className="mr-0.5">الأدمن</span>
               </Button>
             )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
