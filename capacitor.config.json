@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.68747219c04e4dc78d57e11e0053ee06",
+  "appName": "domestify-it",
+  "webDir": "dist",
+  "server": {
+    "url": "https://68747219-c04e-4dc7-8d57-e11e0053ee06.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
