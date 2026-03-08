@@ -1233,6 +1233,9 @@ export default function AdminDashboard() {
                               <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
                                 <RefreshCw className="h-4 w-4" /> تحويل لآخر
                               </Button>
+                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)}>
+                                <Trash2 className="h-4 w-4 text-destructive" /> حذف
+                              </Button>
                             </div>
                           </motion.div>
                         );
