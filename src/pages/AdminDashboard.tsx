@@ -153,12 +153,6 @@ export default function AdminDashboard() {
     
     const reasons = (tasksData || []).map((t: any) => t.rejection_reason).filter(Boolean);
     setRejectionReasons([...new Set(reasons)] as string[]);
-
-    // Fetch admin's own notifications
-    if (user) {
-      const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      setAdminNotifications(notifData || []);
-    }
   };
 
   const addMember = async () => {
