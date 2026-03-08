@@ -1827,19 +1827,47 @@ export default function AdminDashboard() {
       <Dialog open={!!statDetail} onOpenChange={() => setStatDetail(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{statDetail?.title}</DialogTitle></DialogHeader>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {statDetail?.tasks.map((t) => {
               const assignee = members.find(m => m.id === t.assigned_to);
+              const isPendingReview = t.status === "pending_review";
+              const isFailed = t.status === "failed";
               return (
                 <Card key={t.id}>
-                  <CardContent className="p-3">
-                    <div className="flex justify-between items-center">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{t.title}</p>
                         <p className="text-xs text-muted-foreground">{assignee?.name} • {new Date(t.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                        {t.failure_reason && <p className="text-xs text-destructive mt-1">السبب: {t.failure_reason}</p>}
                       </div>
                       <Badge>{t.status === "completed" ? "مكتملة" : t.status === "pending_review" ? "بانتظار الموافقة" : t.status === "failed" ? "غير مكتملة" : t.status === "deducted" ? "خُصمت" : "قيد التنفيذ"}</Badge>
                     </div>
+                    {isPendingReview && (
+                      <div className="flex gap-2 pt-1">
+                        {t.proof_url && (
+                          <a href={t.proof_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                          </a>
+                        )}
+                        <Button size="sm" onClick={() => { setStatDetail(null); approveTask(t); }} disabled={submitting}>
+                          <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => { setStatDetail(null); openRejectDialog(t); }} disabled={submitting}>
+                          <XCircle className="h-4 w-4" /> {t.requires_proof && t.proof_url ? "رفض الإثبات" : "رفض"}
+                        </Button>
+                      </div>
+                    )}
+                    {isFailed && (
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" variant="destructive" onClick={() => { setStatDetail(null); deductPoints(t); }} disabled={submitting}>
+                          <XCircle className="h-4 w-4" /> خصم النقاط
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setStatDetail(null); setReassignTaskId(t.id); setReassignTo(""); }}>
+                          <RefreshCw className="h-4 w-4" /> تحويل لآخر
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
