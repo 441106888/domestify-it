@@ -23,33 +23,35 @@ Deno.serve(async (req) => {
     const chatId = String(message.chat.id);
     const text = message.text?.trim() || "";
 
-    // Handle /start command with user ID parameter
-    // Format: /start <user_email>
+    // Handle /start command with payload (user_id) or email
+    // Format: /start <user_id_or_email>
     if (text.startsWith("/start")) {
       const parts = text.split(" ");
-      const email = parts[1]?.trim();
+      const identifier = parts[1]?.trim();
 
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      if (email) {
-        // Find user by email directly
-        const { data: users, error } = await supabaseAdmin
-          .from("profiles")
-          .select("id")
-          .limit(1000);
-        
-        // Look up email in auth via admin API with pagination
-        const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-        const targetUser = authUsers?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (identifier) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
 
-        if (targetUser) {
+        let targetUserId: string | null = null;
+
+        if (isUuid) {
+          targetUserId = identifier;
+        } else {
+          const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+          const targetUser = authUsers?.find((u: any) => u.email?.toLowerCase() === identifier.toLowerCase());
+          targetUserId = targetUser?.id ?? null;
+        }
+
+        if (targetUserId) {
           await supabaseAdmin
             .from("profiles")
             .update({ telegram_chat_id: chatId })
-            .eq("id", targetUser.id);
+            .eq("id", targetUserId);
 
           // Send confirmation
           const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
@@ -69,7 +71,7 @@ Deno.serve(async (req) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: chatId,
-              text: "❌ لم يتم العثور على حساب بهذا البريد. تأكد من كتابة البريد الصحيح.\n\nاستخدم: /start your@email.com",
+              text: "❌ تعذر التعرف على الحساب. افتح البوت من داخل التطبيق عبر زر (فتح بوت تلقرام) أو استخدم: /start your@email.com",
             }),
           });
         }
@@ -80,7 +82,7 @@ Deno.serve(async (req) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text: "👋 مرحباً! لربط حسابك أرسل:\n\n/start your@email.com\n\nاستبدل your@email.com ببريدك المسجل في التطبيق.",
+            text: "👋 مرحباً! لربط حسابك افتح البوت من التطبيق عبر زر (فتح بوت تلقرام) ثم اضغط Start، أو أرسل: /start your@email.com",
           }),
         });
       }
