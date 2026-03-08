@@ -459,10 +459,11 @@ export default function AdminDashboard() {
       } as any).eq("id", rejectingTask.id);
       if (error) throw error;
 
-      await sendNotification(rejectingTask.assigned_to!, "تم رفض الإثبات ❌",
-        `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
+      const isProofReject = rejectingTask.requires_proof && rejectingTask.proof_url;
+      await sendNotification(rejectingTask.assigned_to!, isProofReject ? "تم رفض الإثبات ❌" : "تم رفض المهمة ❌",
+        isProofReject ? `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}` : `تم رفض مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
 
-      toast({ title: "تم رفض الإثبات وإعادة المهمة للعضو" });
+      toast({ title: rejectingTask.requires_proof && rejectingTask.proof_url ? "تم رفض الإثبات وإعادة المهمة للعضو" : "تم رفض المهمة وإعادتها للعضو" });
       setRejectingTask(null);
       setRejectionReason("");
       loadData();
@@ -825,7 +826,7 @@ export default function AdminDashboard() {
         {/* Rejection dialog - in member detail */}
         <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
           <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{rejectingTask?.requires_proof && rejectingTask?.proof_url ? "سبب رفض الإثبات" : "سبب الرفض"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               {rejectionReasons.length > 0 && (
                 <div>
@@ -839,7 +840,7 @@ export default function AdminDashboard() {
               )}
               <Textarea placeholder="اكتب سبب الرفض..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} />
               <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full">
-                {submitting ? "جاري الرفض..." : "رفض الإثبات"}
+                {submitting ? "جاري الرفض..." : (rejectingTask?.requires_proof && rejectingTask?.proof_url ? "رفض الإثبات" : "رفض")}
               </Button>
             </div>
           </DialogContent>
@@ -1102,7 +1103,7 @@ export default function AdminDashboard() {
                                 <CheckCircle2 className="h-4 w-4" /> قبول ومنح النقاط
                               </Button>
                               <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
-                                <XCircle className="h-4 w-4" /> رفض الإثبات
+                                <XCircle className="h-4 w-4" /> {task.requires_proof && task.proof_url ? "رفض الإثبات" : "رفض"}
                               </Button>
                             </div>
                           </motion.div>
@@ -1751,7 +1752,7 @@ export default function AdminDashboard() {
       {/* Rejection reason dialog */}
       <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{rejectingTask?.requires_proof && rejectingTask?.proof_url ? "سبب رفض الإثبات" : "سبب الرفض"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {rejectionReasons.length > 0 && (
               <div>
@@ -1765,7 +1766,7 @@ export default function AdminDashboard() {
             )}
             <Textarea placeholder="اكتب سبب الرفض..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} />
             <Button onClick={rejectTask} disabled={!rejectionReason || submitting} className="w-full">
-              {submitting ? "جاري الرفض..." : "رفض الإثبات"}
+              {submitting ? "جاري الرفض..." : (rejectingTask?.requires_proof && rejectingTask?.proof_url ? "رفض الإثبات" : "رفض")}
             </Button>
           </div>
         </DialogContent>
