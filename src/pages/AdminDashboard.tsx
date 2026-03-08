@@ -1218,22 +1218,20 @@ export default function AdminDashboard() {
                         const assignee = members.find(m => m.id === task.assigned_to);
                         return (
                           <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold">{task.title}</p>
-                                <p className="text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
-                                {task.failure_reason && <p className="text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
-                              </div>
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                              {task.failure_reason && <p className="text-xs sm:text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">
-                                <XCircle className="h-4 w-4" /> خصم النقاط
+                            <div className="grid grid-cols-3 gap-2">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
+                                <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">
-                                <RefreshCw className="h-4 w-4" /> تحويل لآخر
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">
+                                <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs">
-                                <Trash2 className="h-4 w-4 text-destructive" /> حذف
+                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20">
+                                <Trash2 className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> حذف
                               </Button>
                             </div>
                           </motion.div>
