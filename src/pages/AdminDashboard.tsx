@@ -906,7 +906,7 @@ export default function AdminDashboard() {
                 </Button>
               </SheetTrigger>
               <SheetContent className="overflow-y-auto">
-                <SheetHeader><SheetTitle>الإشعارات والتنبيهات</SheetTitle></SheetHeader>
+                <SheetHeader><SheetTitle>الإشعارات والتذكيرات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4 pb-6">
                   {pendingReviewTasks.length > 0 && (
                     <div className="space-y-2">
@@ -940,7 +940,9 @@ export default function AdminDashboard() {
                       })}
                     </div>
                   )}
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && (
+                    <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>
+                  )}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
                     <Card className="border-primary/20 bg-primary/5">
@@ -961,11 +963,11 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   </div>
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9"><LogOut className="h-5 w-5" /></Button>
           </div>
         </div>
       </motion.header>
