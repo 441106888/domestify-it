@@ -2,3 +2,21 @@ project_id = "amwrgndjjqfpsphvspyn"
 
 [functions.telegram-webhook]
 verify_jwt = false
+
+[functions.notify-admins]
+verify_jwt = false
+
+[functions.send-telegram]
+verify_jwt = false
+
+[functions.manage-members]
+verify_jwt = false
+
+[functions.member-login]
+verify_jwt = false
+
+[functions.list-members]
+verify_jwt = false
+
+[functions.setup-telegram-webhook]
+verify_jwt = false
