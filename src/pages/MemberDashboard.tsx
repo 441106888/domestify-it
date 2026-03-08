@@ -266,6 +266,15 @@ export default function MemberDashboard() {
       }).eq("id", taskId);
       if (error) throw error;
 
+      const task = tasks.find(t => t.id === taskId);
+      const memberName = profile?.name || "عضو";
+      supabase.functions.invoke("notify-admins", {
+        body: {
+          title: "مهمة مكتملة ✅",
+          message: `${memberName} أكمل مهمة: "${task?.title || ""}"`,
+        },
+      }).catch(() => {});
+
       toast({ title: "تم تسجيل إتمام المهمة ✅", description: "بانتظار موافقة الأدمن" });
       loadData();
     } catch (error: any) {
