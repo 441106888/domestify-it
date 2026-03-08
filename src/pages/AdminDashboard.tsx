@@ -1419,93 +1419,141 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-3">
-                {[...tasks].sort((a, b) => {
-                  const order: Record<string, number> = { pending_review: 0, pending: 1, completed: 2, failed: 3, deducted: 4 };
-                  const oa = order[a.status] ?? 5;
-                  const ob = order[b.status] ?? 5;
-                  if (oa !== ob) return oa - ob;
-                  // Within pending_review, sort by completed_at (earliest first)
-                  if (a.status === "pending_review" && b.status === "pending_review") {
-                    return new Date(a.completed_at || 0).getTime() - new Date(b.completed_at || 0).getTime();
-                  }
-                  return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-                }).map((task, i) => {
-                  const assignee = members.find(m => m.id === task.assigned_to);
-                  const isOverdue = task.status === "pending" && new Date(task.deadline) < new Date();
-                  const isPendingReview = task.status === "pending_review";
-                  return (
-                    <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" layout>
-                      <Card className={isPendingReview ? "border-primary/50" : isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
-                                  : isPendingReview ? <ImageIcon className="h-5 w-5 text-primary" />
-                                  : task.status === "failed" ? <AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" />
-                                  : task.status === "deducted" ? <XCircle className="h-5 w-5 text-destructive" />
-                                  : isOverdue ? <AlertTriangle className="h-5 w-5 text-destructive" />
-                                  : <Clock className="h-5 w-5 text-[hsl(var(--warning))]" />}
-                                <h3 className="font-bold">{task.title}</h3>
-                              </div>
-                              {task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
-                              <div className="flex flex-wrap gap-2 text-xs">
-                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>
-                                {assignee && <Badge variant="secondary" className="font-bold text-sm">{assignee.name}</Badge>}
-                                <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>
-                                {!task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
-                                {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
-                              </div>
-                              {task.failure_reason && <p className="text-sm text-destructive mt-2 flex items-center gap-1"><XCircle className="h-4 w-4" /> {task.failure_reason}</p>}
-                              {task.rejection_reason && <p className="text-sm text-destructive mt-1 flex items-center gap-1">سبب الرفض: {task.rejection_reason}</p>}
-                              
-                              {isPendingReview && (
-                                <div className="flex gap-2 mt-3 items-center">
-                                  {task.proof_url && (
-                                    <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
-                                      <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
-                                    </a>
+                {(() => {
+                  const sorted = [...tasks].sort((a, b) => {
+                    const order: Record<string, number> = { pending_review: 0, pending: 1, completed: 2, failed: 3, deducted: 4 };
+                    const oa = order[a.status] ?? 5;
+                    const ob = order[b.status] ?? 5;
+                    if (oa !== ob) return oa - ob;
+                    if (a.status === "pending_review" && b.status === "pending_review") {
+                      return new Date(a.completed_at || 0).getTime() - new Date(b.completed_at || 0).getTime();
+                    }
+                    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                  });
+
+                  // Group tasks by title+deadline+points+description
+                  const groupKey = (t: Task) => `${t.title}||${t.deadline}||${t.points}||${t.description || ""}`;
+                  const groupMap = new Map<string, Task[]>();
+                  const groupOrder: string[] = [];
+                  sorted.forEach(t => {
+                    const key = groupKey(t);
+                    if (!groupMap.has(key)) {
+                      groupMap.set(key, []);
+                      groupOrder.push(key);
+                    }
+                    groupMap.get(key)!.push(t);
+                  });
+
+                  return groupOrder.map((key, gi) => {
+                    const group = groupMap.get(key)!;
+                    const isGrouped = group.length > 1;
+
+                    const renderTask = (task: Task, i: number) => {
+                      const assignee = members.find(m => m.id === task.assigned_to);
+                      const isOverdue = task.status === "pending" && new Date(task.deadline) < new Date();
+                      const isPendingReview = task.status === "pending_review";
+                      return (
+                        <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" layout>
+                          <Card className={isPendingReview ? "border-primary/50" : isOverdue ? "border-destructive/50" : task.status === "failed" ? "border-[hsl(var(--warning))]/50" : ""}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
+                                      : isPendingReview ? <ImageIcon className="h-5 w-5 text-primary" />
+                                      : task.status === "failed" ? <AlertTriangle className="h-5 w-5 text-[hsl(var(--warning))]" />
+                                      : task.status === "deducted" ? <XCircle className="h-5 w-5 text-destructive" />
+                                      : isOverdue ? <AlertTriangle className="h-5 w-5 text-destructive" />
+                                      : <Clock className="h-5 w-5 text-[hsl(var(--warning))]" />}
+                                    {!isGrouped && <h3 className="font-bold">{task.title}</h3>}
+                                    {isGrouped && assignee && <h3 className="font-bold">{assignee.name}</h3>}
+                                  </div>
+                                  {!isGrouped && task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
+                                  <div className="flex flex-wrap gap-2 text-xs">
+                                    {!isGrouped && <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>}
+                                    {!isGrouped && assignee && <Badge variant="secondary" className="font-bold text-sm">{assignee.name}</Badge>}
+                                    {!isGrouped && <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>}
+                                    {!isGrouped && !task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
+                                    {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
+                                  </div>
+                                  {task.failure_reason && <p className="text-sm text-destructive mt-2 flex items-center gap-1"><XCircle className="h-4 w-4" /> {task.failure_reason}</p>}
+                                  {task.rejection_reason && <p className="text-sm text-destructive mt-1 flex items-center gap-1">سبب الرفض: {task.rejection_reason}</p>}
+                                  
+                                  {isPendingReview && (
+                                    <div className="flex gap-2 mt-3 items-center">
+                                      {task.proof_url && (
+                                        <a href={task.proof_url} target="_blank" rel="noopener noreferrer">
+                                          <Button variant="outline" size="sm"><ImageIcon className="h-4 w-4" /> الإثبات</Button>
+                                        </a>
+                                      )}
+                                      <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
+                                        <CheckCircle2 className="h-4 w-4" /> قبول
+                                      </Button>
+                                      <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
+                                        <XCircle className="h-4 w-4" /> رفض
+                                      </Button>
+                                    </div>
                                   )}
-                                  <Button size="sm" onClick={() => approveTask(task)} disabled={submitting}>
-                                    <CheckCircle2 className="h-4 w-4" /> قبول
-                                  </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => openRejectDialog(task)} disabled={submitting}>
-                                    <XCircle className="h-4 w-4" /> رفض
-                                  </Button>
-                                </div>
-                              )}
 
-                              {task.status === "failed" && (
-                                <div className="flex gap-2 mt-3">
-                                  <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>خصم النقاط</Button>
-                                  <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>تحويل لآخر</Button>
-                                </div>
-                              )}
+                                  {task.status === "failed" && (
+                                    <div className="flex gap-2 mt-3">
+                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>خصم النقاط</Button>
+                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>تحويل لآخر</Button>
+                                    </div>
+                                  )}
 
-                              {/* Allow reassigning any pending task */}
-                              {task.status === "pending" && (
-                                <div className="flex gap-2 mt-3">
-                                  <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
-                                    <RefreshCw className="h-4 w-4" /> تحويل لعضو آخر
-                                  </Button>
+                                  {task.status === "pending" && (
+                                    <div className="flex gap-2 mt-3">
+                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
+                                        <RefreshCw className="h-4 w-4" /> تحويل لعضو آخر
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
-                                {task.status === "completed" ? "مكتملة" : isPendingReview ? "بانتظار الموافقة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
-                              </Badge>
-                              {task.status === "pending" && (
-                                <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
-                              )}
-                              <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
+                                <div className="flex items-center gap-1">
+                                  <Badge variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
+                                    {task.status === "completed" ? "مكتملة" : isPendingReview ? "بانتظار الموافقة" : task.status === "failed" ? "بانتظار القرار" : task.status === "deducted" ? "خُصمت" : isOverdue ? "متأخرة" : "قيد التنفيذ"}
+                                  </Badge>
+                                  {task.status === "pending" && (
+                                    <Button variant="ghost" size="icon" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    };
+
+                    if (isGrouped) {
+                      return (
+                        <motion.div key={key} custom={gi} variants={cardVariants} initial="hidden" animate="visible">
+                          <Card className="border-2 border-primary/30 bg-primary/5">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Users className="h-5 w-5 text-primary" />
+                                <h3 className="font-bold text-lg">{group[0].title}</h3>
+                                <Badge className="bg-primary/10 text-primary">{group.length} أعضاء</Badge>
+                                <Badge className="bg-primary/10 text-primary">{group[0].points} نقطة</Badge>
+                                {!group[0].requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
+                              </div>
+                              {group[0].description && <p className="text-sm text-muted-foreground mb-2">{group[0].description}</p>}
+                              <div className="flex flex-wrap gap-2 text-xs mb-3">
+                                <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(group[0].deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>
+                              </div>
+                              <div className="space-y-2">
+                                {group.map((t, ti) => renderTask(t, gi + ti))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    }
+
+                    return renderTask(group[0], gi);
+                  });
+                })()}
                 {tasks.length === 0 && <p className="text-center text-muted-foreground py-8">لا توجد مهام بعد</p>}
               </div>
             </motion.div>
