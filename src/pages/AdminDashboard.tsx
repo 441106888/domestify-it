@@ -913,9 +913,9 @@ export default function AdminDashboard() {
               <AvatarImage src={profile?.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-lg font-bold">لوحة التحكم</h1>
-              <p className="text-sm text-muted-foreground">مرحباً، {profile?.name}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold truncate">لوحة التحكم</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">مرحباً، {profile?.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
