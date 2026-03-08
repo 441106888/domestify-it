@@ -323,7 +323,16 @@ export default function MemberDashboard() {
   const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
-  const myRank = leaderboard.findIndex(m => m.id === user?.id) + 1;
+  // Dense ranking: same points = same rank
+  const getRank = (index: number) => {
+    if (index === 0) return 1;
+    if ((leaderboard[index]?.total_points || 0) === (leaderboard[index - 1]?.total_points || 0)) {
+      return getRank(index - 1);
+    }
+    return index + 1;
+  };
+  const myIndex = leaderboard.findIndex(m => m.id === user?.id);
+  const myRank = myIndex >= 0 ? getRank(myIndex) : 0;
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
@@ -337,20 +346,20 @@ export default function MemberDashboard() {
     { name: "غير مكتملة", عدد: failedTasks.length },
   ];
 
-  const getRankIcon = (index: number) => {
-    if (index === 0) return (
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return (
       <div className="flex items-center gap-0.5">
         <Crown className="h-5 w-5 text-[hsl(var(--gold))]" />
         <span className="font-bold text-xs text-[hsl(var(--gold))]">1</span>
       </div>
     );
-    if (index === 1) return (
+    if (rank === 2) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-4 w-4 text-[hsl(var(--silver))]" />
         <span className="font-bold text-xs text-[hsl(var(--silver))]">2</span>
       </div>
     );
-    if (index === 2) return (
+    if (rank === 3) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-4 w-4 text-[hsl(var(--bronze))]" />
         <span className="font-bold text-xs text-[hsl(var(--bronze))]">3</span>
@@ -705,7 +714,7 @@ export default function MemberDashboard() {
                 {leaderboard.map((m, i) => (
                   <motion.div key={m.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.08 }}
                     className={`flex items-center gap-3 p-2 rounded-lg ${m.id === user?.id ? 'bg-primary/10 border border-primary/20' : 'bg-secondary/50'}`}>
-                    <div className="w-8 text-center">{getRankIcon(i) || <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>}</div>
+                    <div className="w-8 text-center">{getRankIcon(getRank(i)) || <span className="text-xs font-bold text-muted-foreground">{getRank(i)}</span>}</div>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={m.avatar_url || undefined} />
                       <AvatarFallback className="text-sm bg-primary/10 text-primary">{m.name.charAt(0)}</AvatarFallback>

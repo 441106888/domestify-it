@@ -551,6 +551,15 @@ export default function AdminDashboard() {
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const sortedMembers = [...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
 
+  // Dense ranking: same points = same rank
+  const getMemberRank = (index: number) => {
+    if (index === 0) return 1;
+    if ((sortedMembers[index]?.total_points || 0) === (sortedMembers[index - 1]?.total_points || 0)) {
+      return getMemberRank(index - 1);
+    }
+    return index + 1;
+  };
+
   const uniqueTaskTitles = [...new Set(tasks.map(t => t.title))];
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
@@ -573,26 +582,26 @@ export default function AdminDashboard() {
     { name: "غير مكتملة", value: incompleteTasks.length },
   ].filter(d => d.value > 0);
 
-  const getRankIcon = (index: number) => {
-    if (index === 0) return (
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return (
       <div className="flex items-center gap-0.5">
         <Crown className="h-6 w-6 text-[hsl(var(--gold))]" />
         <span className="font-bold text-sm text-[hsl(var(--gold))]">1</span>
       </div>
     );
-    if (index === 1) return (
+    if (rank === 2) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-5 w-5 text-[hsl(var(--silver))]" />
         <span className="font-bold text-sm text-[hsl(var(--silver))]">2</span>
       </div>
     );
-    if (index === 2) return (
+    if (rank === 3) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-5 w-5 text-[hsl(var(--bronze))]" />
         <span className="font-bold text-sm text-[hsl(var(--bronze))]">3</span>
       </div>
     );
-    return <span className="text-sm text-muted-foreground font-bold">{index + 1}</span>;
+    return <span className="text-sm text-muted-foreground font-bold">{rank}</span>;
   };
 
   const tabs = [
@@ -1173,7 +1182,7 @@ export default function AdminDashboard() {
                         {sortedMembers.slice(0, 3).map((m, i) => (
                           <motion.div key={m.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1 }}
                             className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
-                            <div className="w-8 text-center">{getRankIcon(i)}</div>
+                            <div className="w-8 text-center">{getRankIcon(getMemberRank(i))}</div>
                             <Avatar className="h-8 w-8">
                               <AvatarImage src={m.avatar_url || undefined} />
                               <AvatarFallback className="text-sm bg-primary/10 text-primary">{m.name.charAt(0)}</AvatarFallback>
@@ -1416,9 +1425,9 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold flex items-center gap-2"><Trophy className="text-[hsl(var(--gold))]" /> لوحة المتصدرين</h2>
               {sortedMembers.map((m, i) => (
                 <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-                  <Card className={i < 3 ? "border-2 " + (i === 0 ? "border-[hsl(var(--gold))]" : i === 1 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}>
+                  <Card className={getMemberRank(i) <= 3 ? "border-2 " + (getMemberRank(i) === 1 ? "border-[hsl(var(--gold))]" : getMemberRank(i) === 2 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}>
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="text-center w-12">{getRankIcon(i)}</div>
+                      <div className="text-center w-12">{getRankIcon(getMemberRank(i))}</div>
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={m.avatar_url || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{m.name.charAt(0)}</AvatarFallback>
