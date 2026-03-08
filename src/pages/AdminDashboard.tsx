@@ -1258,7 +1258,9 @@ export default function AdminDashboard() {
                     <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> لوحة المتصدرين</CardTitle></CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {sortedMembers.slice(0, 3).map((m, i) => (
+                        {sortedMembers.filter((_, i) => getMemberRank(i) <= 3).map((m, idx) => {
+                          const originalIndex = sortedMembers.indexOf(m);
+                          return (
                           <motion.div key={m.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1 }}
                             className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
                             <div className="w-8 text-center">{getRankIcon(getMemberRank(i))}</div>
