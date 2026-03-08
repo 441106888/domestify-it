@@ -1562,7 +1562,7 @@ export default function AdminDashboard() {
 
       {/* Edit task dialog */}
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تعديل المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
