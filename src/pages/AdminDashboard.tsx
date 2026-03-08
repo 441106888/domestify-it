@@ -1788,7 +1788,7 @@ export default function AdminDashboard() {
                 </Dialog>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {admins.map((admin, i) => (
                   <motion.div key={admin.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
                     <Card className={admin.id === user?.id ? "border-primary/50" : ""}>
