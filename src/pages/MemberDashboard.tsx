@@ -308,7 +308,12 @@ export default function MemberDashboard() {
   ];
 
   const getRankIcon = (index: number) => {
-    if (index === 0) return <Crown className="h-5 w-5 text-[hsl(var(--gold))]" />;
+    if (index === 0) return (
+      <div className="flex items-center gap-0.5">
+        <Crown className="h-5 w-5 text-[hsl(var(--gold))]" />
+        <span className="font-bold text-xs text-[hsl(var(--gold))]">1</span>
+      </div>
+    );
     if (index === 1) return (
       <div className="flex items-center gap-0.5">
         <Award className="h-4 w-4 text-[hsl(var(--silver))]" />
