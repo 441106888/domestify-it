@@ -126,6 +126,9 @@ export default function AdminDashboard() {
   const [adminIsMember, setAdminIsMember] = useState(false);
   const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
   const [showTelegramBanner, setShowTelegramBanner] = useState(false);
+  const [msgTo, setMsgTo] = useState("");
+  const [msgText, setMsgText] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -989,6 +992,51 @@ export default function AdminDashboard() {
                         >
                           <Send className="h-4 w-4 ml-1" />
                           فتح بوت تلقرام
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-sm font-bold text-muted-foreground mb-2">✉️ إرسال رسالة لعضو</p>
+                    <Card className="border-accent/20">
+                      <CardContent className="p-3 space-y-3">
+                        <select
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={msgTo}
+                          onChange={e => setMsgTo(e.target.value)}
+                        >
+                          <option value="">اختر العضو...</option>
+                          {members.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                        <Textarea
+                          placeholder="اكتب الرسالة..."
+                          value={msgText}
+                          onChange={e => setMsgText(e.target.value)}
+                          className="min-h-[80px]"
+                        />
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={!msgTo || !msgText.trim() || sendingMsg}
+                          onClick={async () => {
+                            setSendingMsg(true);
+                            try {
+                              await sendNotification(msgTo, "رسالة من الإدارة 📩", msgText.trim());
+                              toast({ title: "تم إرسال الرسالة بنجاح ✅" });
+                              setMsgTo("");
+                              setMsgText("");
+                            } catch {
+                              toast({ title: "خطأ في الإرسال", variant: "destructive" });
+                            } finally {
+                              setSendingMsg(false);
+                            }
+                          }}
+                        >
+                          <Send className="h-4 w-4 ml-1" />
+                          {sendingMsg ? "جاري الإرسال..." : "إرسال"}
                         </Button>
                       </CardContent>
                     </Card>
