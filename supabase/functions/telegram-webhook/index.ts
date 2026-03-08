@@ -35,20 +35,23 @@ Deno.serve(async (req) => {
       );
 
       if (email) {
-        // Find user by email using admin API
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
-          filter: { email: email },
-          page: 1,
-          perPage: 1,
-        });
+        // Find user by email - fetch all users with pagination to ensure we find them
+        let targetUser: any = null;
+        let page = 1;
+        const perPage = 100;
         
-        // Fallback: also try profile-based lookup if auth lookup fails
-        let targetUser = users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-        
-        if (!targetUser) {
-          // Try searching by email in auth users with exact match
-          const allUsersResp = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-          targetUser = allUsersResp.data?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+        while (!targetUser) {
+          const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+          
+          if (error || !users || users.length === 0) break;
+          
+          targetUser = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          
+          if (users.length < perPage) break; // Last page
+          page++;
         }
 
         if (targetUser) {
