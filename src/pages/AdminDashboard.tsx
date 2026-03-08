@@ -940,7 +940,9 @@ export default function AdminDashboard() {
                       })}
                     </div>
                   )}
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && (
+                    <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>
+                  )}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
                     <Card className="border-primary/20 bg-primary/5">
