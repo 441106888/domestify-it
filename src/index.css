@@ -110,25 +110,4 @@
   body {
     @apply bg-background text-foreground font-cairo;
   }
-
-  /* Mobile-friendly touch targets */
-  @media (max-width: 640px) {
-    button, [role="button"], a {
-      min-height: 44px;
-      min-width: 44px;
-    }
-
-    input, textarea, select {
-      min-height: 44px;
-      font-size: 16px !important; /* Prevents iOS zoom on focus */
-    }
-
-    .space-y-2 > * + * {
-      margin-top: 0.75rem;
-    }
-
-    .space-y-3 > * + * {
-      margin-top: 1rem;
-    }
-  }
 }

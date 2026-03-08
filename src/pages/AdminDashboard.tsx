@@ -870,13 +870,13 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {adminIsMember && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="h-10 px-3">
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
                 <Users className="h-4 w-4 ml-1" /> لوحة العضو
               </Button>
             )}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-10 w-10">
+                <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                     <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -914,7 +914,7 @@ export default function AdminDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-10 w-10"><LogOut className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
           </div>
         </div>
       </motion.header>
