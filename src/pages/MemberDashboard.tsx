@@ -239,6 +239,15 @@ export default function MemberDashboard() {
       }).eq("id", proofTaskId);
       if (error) throw error;
 
+      // Notify admins via Telegram
+      const memberName = profile?.name || "عضو";
+      supabase.functions.invoke("notify-admins", {
+        body: {
+          title: "إثبات مهمة جديد 📸",
+          message: `${memberName} أرسل إثبات لمهمة: "${task.title}"`,
+        },
+      }).catch(() => {});
+
       toast({ title: "تم إرسال الإثبات ✅", description: "بانتظار موافقة الأدمن لمنح النقاط" });
       setProofTaskId(null);
       loadData();
