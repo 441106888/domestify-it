@@ -1065,14 +1065,18 @@ export default function AdminDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={() => {
+            <Button variant="ghost" onClick={() => {
               if (user && profile) {
                 openEditMember({ id: user.id, name: profile.name, avatar_url: profile.avatar_url, total_points: profile.total_points } as Member);
               }
-            }} className="h-8 w-8 sm:h-9 sm:w-9">
+            }} className="h-8 sm:h-9 px-1.5 sm:px-2 flex flex-col items-center gap-0 text-[0.6rem] sm:text-xs">
               <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>تعديل</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 sm:h-9 sm:w-9"><LogOut className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+            <Button variant="ghost" onClick={signOut} className="h-8 sm:h-9 px-1.5 sm:px-2 flex flex-col items-center gap-0 text-[0.6rem] sm:text-xs">
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>خروج</span>
+            </Button>
           </div>
         </div>
       </motion.header>
