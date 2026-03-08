@@ -1509,7 +1509,7 @@ export default function AdminDashboard() {
                   <DialogTrigger asChild>
                     <Button><Shield className="h-4 w-4" /> أدمن جديد</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>إنشاء حساب أدمن جديد</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <Input placeholder="اسم الأدمن" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} />
