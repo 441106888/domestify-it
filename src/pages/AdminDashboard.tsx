@@ -1348,7 +1348,17 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-3">
-                {tasks.map((task, i) => {
+                {[...tasks].sort((a, b) => {
+                  const order: Record<string, number> = { pending_review: 0, completed: 1, failed: 2, deducted: 3, pending: 4 };
+                  const oa = order[a.status] ?? 5;
+                  const ob = order[b.status] ?? 5;
+                  if (oa !== ob) return oa - ob;
+                  // Within pending_review, sort by completed_at (earliest first)
+                  if (a.status === "pending_review" && b.status === "pending_review") {
+                    return new Date(a.completed_at || 0).getTime() - new Date(b.completed_at || 0).getTime();
+                  }
+                  return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                }).map((task, i) => {
                   const assignee = members.find(m => m.id === task.assigned_to);
                   const isOverdue = task.status === "pending" && new Date(task.deadline) < new Date();
                   const isPendingReview = task.status === "pending_review";
