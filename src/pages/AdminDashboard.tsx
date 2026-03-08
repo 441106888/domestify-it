@@ -906,22 +906,23 @@ export default function AdminDashboard() {
   // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
-      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 max-w-7xl mx-auto gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate">لوحة التحكم</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">مرحباً، {profile?.name}</p>
+              <h1 className="text-sm sm:text-lg font-bold truncate leading-tight">لوحة التحكم</h1>
+              <p className="text-[11px] sm:text-sm text-muted-foreground truncate leading-tight">مرحباً، {profile?.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
             {adminIsMember && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-xs sm:text-sm px-2 sm:px-3">
-                <Users className="h-4 w-4 ml-1" /> لوحة العضو
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline mr-1">لوحة العضو</span>
               </Button>
             )}
             <Sheet>
