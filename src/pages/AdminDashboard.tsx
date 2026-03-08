@@ -21,7 +21,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend, LabelList
 } from "recharts";
 import {
-  LogOut, Plus, Users, ClipboardList, Trophy, BarChart3,
+  LogOut, Plus, Users, ClipboardList, Trophy, BarChart3, User,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send
 } from "lucide-react";
@@ -921,7 +921,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
             {adminIsMember && (
               <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9 flex items-center gap-1">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="mr-0.5">العضو</span>
               </Button>
             )}
