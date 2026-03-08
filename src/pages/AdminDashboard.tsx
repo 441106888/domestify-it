@@ -891,15 +891,7 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 ml-1" /> لوحة العضو
               </Button>
             )}
-            <Sheet onOpenChange={async (open) => {
-              if (open) {
-                const unread = adminNotifications.filter(n => !n.is_read);
-                if (unread.length > 0) {
-                  await Promise.all(unread.map(n => supabase.from("notifications").update({ is_read: true }).eq("id", n.id)));
-                  setAdminNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-                }
-              }
-            }}>
+            <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative h-9 w-9">
                   <Bell className="h-5 w-5" />
