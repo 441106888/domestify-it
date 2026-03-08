@@ -421,9 +421,24 @@ export default function MemberDashboard() {
                     {notifications.length > 0 ? notifications.map(n => (
                       <Card key={n.id} className={`mb-2 ${!n.is_read ? 'border-primary/30 bg-primary/5' : ''}`}>
                         <CardContent className="p-3">
-                          <p className="font-medium text-sm">{n.title}</p>
-                          <p className="text-xs text-muted-foreground">{n.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{n.title}</p>
+                              <p className="text-xs text-muted-foreground">{n.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={async () => {
+                                await supabase.from("notifications").delete().eq("id", n.id);
+                                setNotifications(prev => prev.filter(x => x.id !== n.id));
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     )) : <p className="text-sm text-muted-foreground text-center">لا توجد إشعارات</p>}
