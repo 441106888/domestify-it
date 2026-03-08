@@ -1,0 +1,1 @@
+ALTER TABLE public.notifications ADD COLUMN context text NOT NULL DEFAULT 'member';

@@ -45,6 +45,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          context: string
           created_at: string | null
           id: string
           is_read: boolean | null
@@ -53,6 +54,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          context?: string
           created_at?: string | null
           id?: string
           is_read?: boolean | null
@@ -61,6 +63,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          context?: string
           created_at?: string | null
           id?: string
           is_read?: boolean | null

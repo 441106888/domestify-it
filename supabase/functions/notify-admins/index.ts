@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { title, message, exclude_user_id } = await req.json();
+    const { title, message } = await req.json();
 
     // Get all admin user IDs
     const { data: adminRoles } = await supabaseAdmin
@@ -35,10 +35,7 @@ Deno.serve(async (req) => {
       .select("user_id")
       .eq("role", "admin");
 
-    let adminIds = adminRoles?.map((r: any) => r.user_id) || [];
-    if (exclude_user_id) {
-      adminIds = adminIds.filter((id: string) => id !== exclude_user_id);
-    }
+    const adminIds = adminRoles?.map((r: any) => r.user_id) || [];
 
     if (adminIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), {
@@ -61,6 +58,7 @@ Deno.serve(async (req) => {
         user_id: admin.id,
         title,
         message,
+        context: "admin",
       });
 
       // Send Telegram if linked

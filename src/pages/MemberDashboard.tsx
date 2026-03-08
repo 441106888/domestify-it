@@ -191,7 +191,7 @@ export default function MemberDashboard() {
     const loadedTasks = (tasksData || []).map((t: any) => ({ ...t, requires_proof: t.requires_proof ?? true })) as Task[];
     setTasks(loadedTasks);
 
-    const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
+    const { data: notifData } = await (supabase.from("notifications").select("*").eq("user_id", user.id) as any).eq("context", "member").order("created_at", { ascending: false }).limit(20);
     setNotifications((notifData || []) as Notification[]);
 
     // Leaderboard: fetch only members (users with member role)
@@ -257,7 +257,6 @@ export default function MemberDashboard() {
         body: {
           title: "إثبات مهمة جديد 📸",
           message: `${memberName} أرسل إثبات لمهمة: "${task.title}"`,
-          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
@@ -285,7 +284,6 @@ export default function MemberDashboard() {
         body: {
           title: "مهمة مكتملة ✅",
           message: `${memberName} أكمل مهمة: "${task?.title || ""}"`,
-          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
