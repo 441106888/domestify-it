@@ -51,7 +51,8 @@ Deno.serve(async (req) => {
     }
 
     const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
-    const text = title ? `<b>${title}</b>\n\n${message}` : message;
+    const appUrl = "https://domestify-it.lovable.app";
+    const text = title ? `<b>${title}</b>\n\n${message}\n\n<a href="${appUrl}">🔗 افتح التطبيق</a>` : `${message}\n\n<a href="${appUrl}">🔗 افتح التطبيق</a>`;
 
     const tgResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",

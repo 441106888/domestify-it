@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
 
       // Send Telegram if linked
       if (admin.telegram_chat_id) {
-        const text = `<b>${title}</b>\n\n${message}`;
+        const appUrl = "https://domestify-it.lovable.app";
+        const text = `<b>${title}</b>\n\n${message}\n\n<a href="${appUrl}">🔗 افتح التطبيق</a>`;
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
