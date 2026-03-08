@@ -125,7 +125,6 @@ export default function AdminDashboard() {
   // Admin is also member
   const [adminIsMember, setAdminIsMember] = useState(false);
   const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
-  const [adminNotifications, setAdminNotifications] = useState<{ id: string; title: string; message: string; is_read: boolean; created_at: string }[]>([]);
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -154,12 +153,6 @@ export default function AdminDashboard() {
     
     const reasons = (tasksData || []).map((t: any) => t.rejection_reason).filter(Boolean);
     setRejectionReasons([...new Set(reasons)] as string[]);
-
-    // Fetch admin's own notifications
-    if (user) {
-      const { data: notifData } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      setAdminNotifications(notifData || []);
-    }
   };
 
   const addMember = async () => {
@@ -898,23 +891,15 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 ml-1" /> لوحة العضو
               </Button>
             )}
-            <Sheet onOpenChange={async (open) => {
-              if (open) {
-                const unread = adminNotifications.filter(n => !n.is_read);
-                if (unread.length > 0) {
-                  await Promise.all(unread.map(n => supabase.from("notifications").update({ is_read: true }).eq("id", n.id)));
-                  setAdminNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-                }
-              }
-            }}>
+            <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative h-9 w-9">
                   <Bell className="h-5 w-5" />
                   <AnimatePresence>
-                    {(failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length) > 0 && (
+                    {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
                         className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length}
+                        {failedTasks.length + pendingReviewTasks.length}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -955,33 +940,7 @@ export default function AdminDashboard() {
                       })}
                     </div>
                   )}
-                  <div className="border-t pt-3">
-                    <p className="text-sm font-bold text-muted-foreground mb-2">الإشعارات السابقة</p>
-                    {adminNotifications.length > 0 ? adminNotifications.map(n => (
-                      <Card key={n.id} className={`mb-2 ${!n.is_read ? 'border-primary/30 bg-primary/5' : ''}`}>
-                        <CardContent className="p-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm">{n.title}</p>
-                              <p className="text-xs text-muted-foreground">{n.message}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                              onClick={async () => {
-                                await supabase.from("notifications").delete().eq("id", n.id);
-                                setAdminNotifications(prev => prev.filter(x => x.id !== n.id));
-                              }}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )) : <p className="text-sm text-muted-foreground text-center">لا توجد إشعارات</p>}
-                  </div>
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                   <div className="border-t pt-3 mt-3">
                     <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
                     <Card className="border-primary/20 bg-primary/5">
@@ -1002,7 +961,7 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   </div>
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && adminNotifications.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                 </div>
               </SheetContent>
             </Sheet>
