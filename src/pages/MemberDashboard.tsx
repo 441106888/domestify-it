@@ -338,10 +338,21 @@ export default function MemberDashboard() {
     if (!failureTaskId || !failureReason) return;
     setSubmitting(true);
     try {
+      const task = tasks.find(t => t.id === failureTaskId);
       await supabase.from("tasks").update({
         status: "failed" as any, failure_reason: failureReason,
         points_awarded: 0, updated_at: new Date().toISOString(),
       }).eq("id", failureTaskId);
+
+      // Notify admins via Telegram
+      const memberName = profile?.name || "عضو";
+      supabase.functions.invoke("notify-admins", {
+        body: {
+          title: "عضو لم يستطع إتمام المهمة ⚠️",
+          message: `${memberName} لم يستطع إتمام مهمة: "${task?.title || ""}" - السبب: ${failureReason}`,
+        },
+      }).catch(() => {});
+
       toast({ title: "تم إرسال السبب للأدمن", description: "سيقوم الأدمن بمراجعة طلبك واتخاذ القرار" });
       setFailureTaskId(null); setFailureReason("");
       loadData();
