@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("members").delete().eq("id", member_id);
       await supabaseAdmin.from("profiles").delete().eq("id", member_id);
       
-      await supabaseAdmin.auth.admin.deleteUser(member_id);
+      await supabaseAdmin.auth.admin.deleteUser(member_id, false);
       
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
