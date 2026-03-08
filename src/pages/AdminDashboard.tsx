@@ -1523,11 +1523,16 @@ export default function AdminDashboard() {
                               {admin.id === user?.id && <Badge variant="secondary" className="text-xs mr-1">أنت</Badge>}
                             </div>
                           </div>
-                          {admin.id !== user?.id && admins.length > 1 && (
-                            <Button variant="ghost" size="icon" onClick={() => deleteAdmin(admin.id)} disabled={submitting}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditMember({ ...admin, total_points: 0 } as Member)}>
+                              <Edit className="h-4 w-4 text-primary" />
                             </Button>
-                          )}
+                            {admin.id !== user?.id && admins.length > 1 && (
+                              <Button variant="ghost" size="icon" onClick={() => deleteAdmin(admin.id)} disabled={submitting}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
