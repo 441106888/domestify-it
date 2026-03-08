@@ -540,11 +540,13 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={openEditProfile} className="h-8 w-8 sm:h-9 sm:w-9">
+            <Button variant="ghost" onClick={openEditProfile} className="h-8 sm:h-9 px-1.5 sm:px-2 flex flex-col items-center gap-0 text-[0.6rem] sm:text-xs">
               <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>تعديل</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 sm:h-9 sm:w-9">
+            <Button variant="ghost" onClick={signOut} className="h-8 sm:h-9 px-1.5 sm:px-2 flex flex-col items-center gap-0 text-[0.6rem] sm:text-xs">
               <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>خروج</span>
             </Button>
           </div>
         </div>
