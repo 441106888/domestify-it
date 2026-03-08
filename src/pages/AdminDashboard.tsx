@@ -21,7 +21,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend, LabelList
 } from "recharts";
 import {
-  LogOut, Plus, Users, ClipboardList, Trophy, BarChart3,
+  LogOut, Plus, Users, ClipboardList, Trophy, BarChart3, User,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send
 } from "lucide-react";
