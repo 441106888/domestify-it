@@ -123,6 +123,7 @@ export default function AdminDashboard() {
   const [deleteStep, setDeleteStep] = useState<"confirm" | "points">("confirm");
   // Admin is also member
   const [adminIsMember, setAdminIsMember] = useState(false);
+  const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -1337,100 +1338,111 @@ export default function AdminDashboard() {
           {/* === REPORTS === */}
           {activeTab === "reports" && (
             <motion.div key="reports" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-              <h2 className="text-xl font-bold">التقارير والإحصائيات</h2>
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <h2 className="text-xl font-bold">التقارير والإحصائيات</h2>
+                <div className="flex gap-1 bg-secondary rounded-lg p-1">
+                  {([
+                    { id: "today" as const, label: "اليوم" },
+                    { id: "week" as const, label: "الأسبوع" },
+                    { id: "month" as const, label: "الشهر" },
+                  ]).map(f => (
+                    <Button key={f.id} variant={reportFilter === f.id ? "default" : "ghost"} size="sm"
+                      className={`text-xs px-3 ${reportFilter === f.id ? "" : "hover:bg-secondary"}`}
+                      onClick={() => setReportFilter(f.id)}>
+                      {f.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-              {/* نقاط الأعضاء - بطاقات بسيطة */}
-              <Card>
-                <CardHeader><CardTitle className="text-base">نقاط الأعضاء</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  {[...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0)).map((m, i) => {
-                    const maxPoints = Math.max(...members.map(x => x.total_points || 1), 1);
-                    const pct = Math.max(((m.total_points || 0) / maxPoints) * 100, 2);
-                    return (
-                      <div key={m.id} className="space-y-1">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="font-medium flex items-center gap-2">
-                            <span className="text-muted-foreground w-5 text-center">{i + 1}</span>
-                            {m.name}
-                          </span>
-                          <span className="font-bold text-primary">{m.total_points || 0}</span>
-                        </div>
-                        <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ delay: i * 0.1, duration: 0.5 }}
-                            className="h-full bg-primary rounded-full"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {members.length === 0 && <p className="text-center text-muted-foreground py-4">لا يوجد أعضاء</p>}
-                </CardContent>
-              </Card>
+              {(() => {
+                const now = new Date();
+                const filterStart = new Date();
+                if (reportFilter === "today") filterStart.setHours(0, 0, 0, 0);
+                else if (reportFilter === "week") filterStart.setDate(now.getDate() - 7);
+                else filterStart.setMonth(now.getMonth() - 1);
 
-              {/* توزيع حالات المهام - بطاقات ملونة */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "مكتملة", value: completedTasks.length, icon: CheckCircle2, color: "hsl(var(--success))", bg: "bg-[hsl(var(--success))]/10" },
-                  { label: "قيد التنفيذ", value: pendingTasks.length, icon: Clock, color: "hsl(var(--warning))", bg: "bg-[hsl(var(--warning))]/10" },
-                  { label: "بانتظار الموافقة", value: pendingReviewTasks.length, icon: ImageIcon, color: "hsl(var(--primary))", bg: "bg-primary/10" },
-                  { label: "غير مكتملة", value: incompleteTasks.length, icon: XCircle, color: "hsl(var(--destructive))", bg: "bg-destructive/10" },
-                ].map((item, i) => (
-                  <motion.div key={item.label} custom={i} variants={statCard} initial="hidden" animate="visible">
-                    <Card className="text-center">
-                      <CardContent className="p-4">
-                        <item.icon className="h-6 w-6 mx-auto mb-2" style={{ color: item.color }} />
-                        <p className="text-2xl font-bold" style={{ color: item.color }}>{item.value}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+                const filtered = tasks.filter(t => new Date(t.created_at) >= filterStart);
+                const fCompleted = filtered.filter(t => t.status === "completed");
+                const fPending = filtered.filter(t => t.status === "pending");
+                const fReview = filtered.filter(t => t.status === "pending_review");
+                const fFailed = filtered.filter(t => t.status === "failed" || t.status === "deducted");
+                const fRate = filtered.length > 0 ? Math.round((fCompleted.length / filtered.length) * 100) : 0;
+                const filterLabel = reportFilter === "today" ? "اليوم" : reportFilter === "week" ? "الأسبوع" : "الشهر";
+
+                return (
+                  <>
+                    {/* نقاط الأعضاء */}
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">نقاط الأعضاء</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {[...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0)).map((m, i) => {
+                          const maxPoints = Math.max(...members.map(x => x.total_points || 1), 1);
+                          const pct = Math.max(((m.total_points || 0) / maxPoints) * 100, 2);
+                          return (
+                            <div key={m.id} className="space-y-1">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium flex items-center gap-2">
+                                  <span className="text-muted-foreground w-5 text-center">{i + 1}</span>
+                                  {m.name}
+                                </span>
+                                <span className="font-bold text-primary">{m.total_points || 0}</span>
+                              </div>
+                              <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                  transition={{ delay: i * 0.1, duration: 0.5 }} className="h-full bg-primary rounded-full" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {members.length === 0 && <p className="text-center text-muted-foreground py-4">لا يوجد أعضاء</p>}
                       </CardContent>
                     </Card>
-                  </motion.div>
-                ))}
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <motion.div custom={0} variants={statCard} initial="hidden" animate="visible">
-                  <Card>
-                    <CardHeader><CardTitle>إحصائيات اليوم</CardTitle></CardHeader>
-                    <CardContent className="space-y-3">
+                    {/* حالات المهام للفترة المحددة */}
+                    <div className="grid grid-cols-2 gap-3">
                       {[
-                        { label: "مهام اليوم", value: todayTasks.length, tasks: todayTasks },
-                        { label: "المكتملة", value: todayTasks.filter(t => t.status === "completed").length, tasks: todayTasks.filter(t => t.status === "completed"), cls: "bg-[hsl(var(--success))] text-white" },
-                        { label: "المتبقية", value: todayTasks.filter(t => t.status === "pending").length, tasks: todayTasks.filter(t => t.status === "pending"), cls: "bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]" },
-                        { label: "غير مكتملة", value: todayTasks.filter(t => t.status === "failed" || t.status === "deducted").length, tasks: todayTasks.filter(t => t.status === "failed" || t.status === "deducted"), cls: "bg-destructive text-white" },
-                      ].map(item => (
-                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors"
-                          onClick={() => item.tasks.length > 0 && setStatDetail({ title: `${item.label} - اليوم`, tasks: item.tasks })}>
-                          <span>{item.label}</span>
-                          <Badge className={item.cls || ""}>{item.value}</Badge>
-                        </div>
+                        { label: "مكتملة", value: fCompleted.length, icon: CheckCircle2, color: "hsl(var(--success))", tasks: fCompleted },
+                        { label: "قيد التنفيذ", value: fPending.length, icon: Clock, color: "hsl(var(--warning))", tasks: fPending },
+                        { label: "بانتظار الموافقة", value: fReview.length, icon: ImageIcon, color: "hsl(var(--primary))", tasks: fReview },
+                        { label: "غير مكتملة", value: fFailed.length, icon: XCircle, color: "hsl(var(--destructive))", tasks: fFailed },
+                      ].map((item, i) => (
+                        <motion.div key={item.label} custom={i} variants={statCard} initial="hidden" animate="visible">
+                          <Card className="text-center cursor-pointer hover:bg-secondary/20 transition-colors"
+                            onClick={() => item.tasks.length > 0 && setStatDetail({ title: `${item.label} - ${filterLabel}`, tasks: item.tasks })}>
+                            <CardContent className="p-4">
+                              <item.icon className="h-6 w-6 mx-auto mb-2" style={{ color: item.color }} />
+                              <p className="text-2xl font-bold" style={{ color: item.color }}>{item.value}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
                       ))}
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                    </div>
 
-                <motion.div custom={1} variants={statCard} initial="hidden" animate="visible">
-                  <Card>
-                    <CardHeader><CardTitle>تقرير الأسبوع</CardTitle></CardHeader>
-                    <CardContent className="space-y-3">
-                      {[
-                        { label: "مهام الأسبوع", value: weekTasks.length, tasks: weekTasks },
-                        { label: "المكتملة", value: weekCompleted.length, tasks: weekCompleted, cls: "bg-[hsl(var(--success))] text-white" },
-                        { label: "غير مكتملة", value: weekFailed.length, tasks: weekFailed, cls: "bg-destructive text-white" },
-                        { label: "نسبة الإنجاز", value: weekTasks.length > 0 ? Math.round((weekCompleted.length / weekTasks.length) * 100) + "%" : "0%", tasks: [] as Task[] },
-                      ].map(item => (
-                        <div key={item.label} className="flex justify-between items-center cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors"
-                          onClick={() => item.tasks.length > 0 && setStatDetail({ title: `${item.label} - الأسبوع`, tasks: item.tasks })}>
-                          <span>{item.label}</span>
-                          <Badge className={item.cls || ""}>{item.value}</Badge>
+                    {/* ملخص الفترة */}
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">ملخص {filterLabel}</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div>
+                            <p className="text-2xl font-bold text-primary">{filtered.length}</p>
+                            <p className="text-xs text-muted-foreground">إجمالي المهام</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-[hsl(var(--success))]">{fCompleted.length}</p>
+                            <p className="text-xs text-muted-foreground">مكتملة</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-[hsl(var(--warning))]">{fRate}%</p>
+                            <p className="text-xs text-muted-foreground">نسبة الإنجاز</p>
+                          </div>
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                );
+              })()}
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <Card>
