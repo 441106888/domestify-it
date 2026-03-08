@@ -687,7 +687,7 @@ export default function MemberDashboard() {
 
       {/* Proof upload dialog */}
       <Dialog open={!!proofTaskId} onOpenChange={() => setProofTaskId(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>إرفاق إثبات تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">يرجى إرفاق صورة أو فيديو كإثبات على تنفيذ المهمة. سيتم مراجعتها من قبل الأدمن قبل منح النقاط.</p>
@@ -734,7 +734,7 @@ export default function MemberDashboard() {
 
       {/* Failure reason dialog */}
       <Dialog open={!!failureTaskId && !proofTaskId} onOpenChange={() => { setFailureTaskId(null); setFailureReason(""); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>سبب عدم تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />

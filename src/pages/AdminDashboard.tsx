@@ -596,7 +596,7 @@ export default function AdminDashboard() {
     const mRate = mTasks.length > 0 ? Math.round((mCompleted.length / mTasks.length) * 100) : 0;
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-y-auto">
         <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
           <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
             <Button variant="ghost" onClick={() => setSelectedMember(null)}><ArrowLeft className="h-5 w-5 ml-1" /> رجوع</Button>
@@ -773,7 +773,7 @@ export default function AdminDashboard() {
 
         {/* Delete task dialog - in member detail */}
         <Dialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
-          <DialogContent>
+           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{deleteStep === "confirm" ? "تأكيد حذف المهمة" : "خصم النقاط؟"}</DialogTitle></DialogHeader>
             {deleteStep === "confirm" ? (
               <div className="space-y-4">
@@ -807,7 +807,7 @@ export default function AdminDashboard() {
 
         {/* Rejection dialog - in member detail */}
         <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
             <div className="space-y-4">
               {rejectionReasons.length > 0 && (
@@ -830,7 +830,7 @@ export default function AdminDashboard() {
 
         {/* Edit member dialog - in member detail */}
         <Dialog open={!!editingMember} onOpenChange={() => setEditingMember(null)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>تعديل بيانات العضو</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
@@ -861,7 +861,7 @@ export default function AdminDashboard() {
 
   // === Main Dashboard ===
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto">
       <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
           <div>
@@ -885,9 +885,9 @@ export default function AdminDashboard() {
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent className="overflow-y-auto">
                 <SheetHeader><SheetTitle>التنبيهات</SheetTitle></SheetHeader>
-                <div className="space-y-3 mt-4">
+                <div className="space-y-3 mt-4 pb-6">
                   {pendingReviewTasks.length > 0 && pendingReviewTasks.map(t => {
                     const assignee = members.find(m => m.id === t.assigned_to);
                     return (
@@ -1087,7 +1087,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">الأعضاء ({members.length})</h2>
                 <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> إضافة عضو</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>إضافة عضو جديد</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <Input placeholder="اسم العضو" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} />
@@ -1509,7 +1509,7 @@ export default function AdminDashboard() {
                   <DialogTrigger asChild>
                     <Button><Shield className="h-4 w-4" /> أدمن جديد</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>إنشاء حساب أدمن جديد</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <Input placeholder="اسم الأدمن" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} />
@@ -1563,7 +1563,7 @@ export default function AdminDashboard() {
 
       {/* Reassign dialog */}
       <Dialog open={!!reassignTaskId} onOpenChange={() => setReassignTaskId(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تحويل المهمة لعضو آخر</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={reassignTo} onChange={(e) => setReassignTo(e.target.value)}>
@@ -1621,7 +1621,7 @@ export default function AdminDashboard() {
 
       {/* Edit member dialog */}
       <Dialog open={!!editingMember} onOpenChange={() => setEditingMember(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تعديل بيانات العضو</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1649,7 +1649,7 @@ export default function AdminDashboard() {
 
       {/* Rejection reason dialog */}
       <Dialog open={!!rejectingTask} onOpenChange={() => setRejectingTask(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>سبب رفض الإثبات</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {rejectionReasons.length > 0 && (
