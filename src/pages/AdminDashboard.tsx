@@ -1496,10 +1496,10 @@ export default function AdminDashboard() {
                                   )}
 
                                   {task.status === "failed" && (
-                                    <div className="flex flex-wrap gap-2 mt-3">
-                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-xs">خصم النقاط</Button>
-                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-xs">تحويل لآخر</Button>
-                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-xs"><Trash2 className="h-4 w-4 text-destructive" /> حذف</Button>
+                                    <div className="grid grid-cols-3 gap-2 mt-3">
+                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">خصم النقاط</Button>
+                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">تحويل لآخر</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20"><Trash2 className="h-3.5 w-3.5 text-destructive" /> حذف</Button>
                                     </div>
                                   )}
 
