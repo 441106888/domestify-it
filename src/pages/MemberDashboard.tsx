@@ -380,15 +380,15 @@ export default function MemberDashboard() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {isAlsoAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-2 sm:px-3">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-3 h-10">
                 <Shield className="h-4 w-4 ml-1" /> الأدمن
               </Button>
             )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10">
                   <Bell className="h-5 w-5" />
                   <AnimatePresence>
                     {unreadNotifs > 0 && (
@@ -451,7 +451,7 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-10 w-10">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
@@ -508,20 +508,20 @@ export default function MemberDashboard() {
                             <p className="text-sm text-destructive">سبب الرفض السابق: {task.rejection_reason}</p>
                           </div>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 sm:gap-3 mt-1">
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
                             {task.requires_proof ? (
-                              <Button size="sm" className="w-full" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
+                              <Button className="w-full h-11 sm:h-10 text-sm" onClick={() => { setProofTaskId(task.id); }} disabled={submitting}>
                                 <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                               </Button>
                             ) : (
-                              <Button size="sm" className="w-full" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                              <Button className="w-full h-11 sm:h-10 text-sm" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
                                 <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                               </Button>
                             )}
                           </motion.div>
                           <motion.div className="flex-1" whileTap={{ scale: 0.97 }}>
-                            <Button size="sm" variant="outline" className="w-full" onClick={() => setFailureTaskId(task.id)}>
+                            <Button variant="outline" className="w-full h-11 sm:h-10 text-sm" onClick={() => setFailureTaskId(task.id)}>
                               <XCircle className="h-4 w-4" /> لم أتمكن
                             </Button>
                           </motion.div>
@@ -738,7 +738,7 @@ export default function MemberDashboard() {
           <DialogHeader><DialogTitle>سبب عدم تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />
-            <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full">
+            <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full h-12 text-base">
               {submitting ? "جاري الإرسال..." : "إرسال السبب"}
             </Button>
           </div>
