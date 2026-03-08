@@ -464,10 +464,8 @@ export default function AdminDashboard() {
         status: "deducted" as any, points_awarded: penalty, updated_at: new Date().toISOString(),
       }).eq("id", task.id);
       await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: penalty });
-      await supabase.from("notifications").insert({
-        user_id: task.assigned_to!, title: "تم خصم نقاط ⚠️",
-        message: `تم خصم ${task.points} نقطة بسبب عدم إتمام مهمة: ${task.title}`,
-      });
+      await sendNotification(task.assigned_to!, "تم خصم نقاط ⚠️",
+        `تم خصم ${task.points} نقطة بسبب عدم إتمام مهمة: ${task.title}`);
       toast({ title: "تم خصم النقاط" });
       loadData();
     } catch (error: any) {
