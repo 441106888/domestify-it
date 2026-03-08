@@ -896,39 +896,96 @@ export default function AdminDashboard() {
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  {(failedTasks.length + pendingReviewTasks.length) > 0 && (
+                  {(failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length) > 0 && (
                     <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {failedTasks.length + pendingReviewTasks.length}
+                      {failedTasks.length + pendingReviewTasks.length + adminNotifications.filter(n => !n.is_read).length}
                     </span>
                   )}
                 </Button>
               </SheetTrigger>
               <SheetContent className="overflow-y-auto">
-                <SheetHeader><SheetTitle>التنبيهات</SheetTitle></SheetHeader>
+                <SheetHeader><SheetTitle>الإشعارات والتنبيهات</SheetTitle></SheetHeader>
                 <div className="space-y-3 mt-4 pb-6">
-                  {pendingReviewTasks.length > 0 && pendingReviewTasks.map(t => {
-                    const assignee = members.find(m => m.id === t.assigned_to);
-                    return (
-                      <Card key={t.id} className="border-primary/30">
+                  {pendingReviewTasks.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold text-primary">⏰ إثباتات بانتظار الموافقة</p>
+                      {pendingReviewTasks.map(t => {
+                        const assignee = members.find(m => m.id === t.assigned_to);
+                        return (
+                          <Card key={t.id} className="border-primary/30">
+                            <CardContent className="p-3">
+                              <p className="font-medium text-sm">{t.title}</p>
+                              <p className="text-xs text-muted-foreground">{assignee?.name} أرسل إثبات بانتظار موافقتك</p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {failedTasks.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold text-destructive">⚠️ مهام لم تُنفذ</p>
+                      {failedTasks.map(t => {
+                        const assignee = members.find(m => m.id === t.assigned_to);
+                        return (
+                          <Card key={t.id} className="border-destructive/30">
+                            <CardContent className="p-3">
+                              <p className="font-medium text-sm">{t.title}</p>
+                              <p className="text-xs text-destructive">{assignee?.name} لم ينفذ المهمة</p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="border-t pt-3">
+                    <p className="text-sm font-bold text-muted-foreground mb-2">الإشعارات السابقة</p>
+                    {adminNotifications.length > 0 ? adminNotifications.map(n => (
+                      <Card key={n.id} className={`mb-2 ${!n.is_read ? 'border-primary/30 bg-primary/5' : ''}`}>
                         <CardContent className="p-3">
-                          <p className="font-medium text-sm">{t.title}</p>
-                          <p className="text-xs text-muted-foreground">{assignee?.name} أرسل إثبات بانتظار موافقتك</p>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{n.title}</p>
+                              <p className="text-xs text-muted-foreground">{n.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={async () => {
+                                await supabase.from("notifications").delete().eq("id", n.id);
+                                setAdminNotifications(prev => prev.filter(x => x.id !== n.id));
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
-                    );
-                  })}
-                  {failedTasks.length > 0 && failedTasks.map(t => {
-                    const assignee = members.find(m => m.id === t.assigned_to);
-                    return (
-                      <Card key={t.id} className="border-destructive/30">
-                        <CardContent className="p-3">
-                          <p className="font-medium text-sm">{t.title}</p>
-                          <p className="text-xs text-destructive">{assignee?.name} لم ينفذ المهمة</p>
-                        </CardContent>
-                      </Card>
-                    );
-                  }) }
-                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
+                    )) : <p className="text-sm text-muted-foreground text-center">لا توجد إشعارات</p>}
+                  </div>
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-sm font-bold text-muted-foreground mb-2">📱 إشعارات تلقرام</p>
+                    <Card className="border-primary/20 bg-primary/5">
+                      <CardContent className="p-3 space-y-2">
+                        <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
+                        <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
+                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت</p>
+                        <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-1"
+                          onClick={() => window.open(`https://t.me/taskhome_noti_bot?start=${user?.id ?? ""}`, "_blank")}
+                        >
+                          <Send className="h-4 w-4 ml-1" />
+                          فتح بوت تلقرام
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  {pendingReviewTasks.length === 0 && failedTasks.length === 0 && adminNotifications.length === 0 && <p className="text-center text-muted-foreground">لا توجد تنبيهات</p>}
                 </div>
               </SheetContent>
             </Sheet>
