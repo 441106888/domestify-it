@@ -360,10 +360,8 @@ export default function AdminDashboard() {
 
       // If reassigned, notify new member
       if (oldAssignee !== newAssignee && newAssignee) {
-        await supabase.from("notifications").insert({
-          user_id: newAssignee, title: "مهمة محولة إليك 🔄",
-          message: `تم تحويل مهمة "${editTask.title}" إليك`,
-        });
+        await sendNotification(newAssignee, "مهمة محولة إليك 🔄",
+          `تم تحويل مهمة "${editTask.title}" إليك`);
       }
 
       toast({ title: "تم تعديل المهمة بنجاح ✅" });
