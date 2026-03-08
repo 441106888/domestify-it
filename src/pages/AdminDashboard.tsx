@@ -773,7 +773,7 @@ export default function AdminDashboard() {
 
         {/* Delete task dialog - in member detail */}
         <Dialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
-          <DialogContent>
+           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{deleteStep === "confirm" ? "تأكيد حذف المهمة" : "خصم النقاط؟"}</DialogTitle></DialogHeader>
             {deleteStep === "confirm" ? (
               <div className="space-y-4">
