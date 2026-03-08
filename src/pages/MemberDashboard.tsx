@@ -738,7 +738,7 @@ export default function MemberDashboard() {
           <DialogHeader><DialogTitle>سبب عدم تنفيذ المهمة</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <Textarea placeholder="اكتب سبب عدم تنفيذ المهمة..." value={failureReason} onChange={(e) => setFailureReason(e.target.value)} rows={4} />
-            <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full">
+            <Button onClick={submitFailureReason} disabled={!failureReason || submitting} className="w-full h-12 text-base">
               {submitting ? "جاري الإرسال..." : "إرسال السبب"}
             </Button>
           </div>
