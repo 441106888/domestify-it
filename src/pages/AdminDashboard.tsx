@@ -1425,9 +1425,9 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold flex items-center gap-2"><Trophy className="text-[hsl(var(--gold))]" /> لوحة المتصدرين</h2>
               {sortedMembers.map((m, i) => (
                 <motion.div key={m.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-                  <Card className={i < 3 ? "border-2 " + (i === 0 ? "border-[hsl(var(--gold))]" : i === 1 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}>
+                  <Card className={getMemberRank(i) <= 3 ? "border-2 " + (getMemberRank(i) === 1 ? "border-[hsl(var(--gold))]" : getMemberRank(i) === 2 ? "border-[hsl(var(--silver))]" : "border-[hsl(var(--bronze))]") : ""}>
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="text-center w-12">{getRankIcon(i)}</div>
+                      <div className="text-center w-12">{getRankIcon(getMemberRank(i))}</div>
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={m.avatar_url || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{m.name.charAt(0)}</AvatarFallback>
