@@ -777,7 +777,7 @@ export default function MemberDashboard() {
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> تقريرك الشخصي</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-               <div className="grid grid-cols-3 gap-3 text-center">
+               <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
                 <div><p className="text-2xl font-bold text-primary">{totalPointsEarned}</p><p className="text-xs text-muted-foreground">نقاط مكتسبة</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--success))]">{weekCompleted}</p><p className="text-xs text-muted-foreground">مكتملة هذا الأسبوع</p></div>
                 <div><p className="text-2xl font-bold text-[hsl(var(--warning))]">{completionRate}%</p><p className="text-xs text-muted-foreground">نسبة الإنجاز</p></div>
