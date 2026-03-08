@@ -166,6 +166,11 @@ export default function AdminDashboard() {
         body: { action: "create", name: newMemberName, email: newMemberEmail, password: newMemberPassword },
       });
       if (error || data?.error) throw new Error(data?.error || "فشل إضافة العضو");
+      // Send welcome notification with Telegram setup instructions
+      if (data?.userId) {
+        await sendNotification(data.userId, "مرحباً بك! 👋",
+          `أهلاً ${newMemberName}! فعّل إشعارات تلقرام لتصلك التنبيهات مباشرة على جوالك.\n\n1. افتح بوت تلقرام من قسم الإشعارات\n2. اضغط Start\n3. ستصلك رسالة تأكيد ✅`);
+      }
       toast({ title: "تم إضافة العضو بنجاح ✅" });
       setNewMemberName(""); setNewMemberEmail(""); setNewMemberPassword("");
       setShowAddMember(false);
