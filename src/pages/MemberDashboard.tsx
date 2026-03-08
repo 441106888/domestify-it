@@ -461,8 +461,9 @@ export default function MemberDashboard() {
             )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9">
+                <Button variant="ghost" className="relative h-8 sm:h-9 px-1.5 sm:px-2 flex flex-col items-center gap-0 text-[0.6rem] sm:text-xs">
                   <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>تنبيهات</span>
                   <AnimatePresence>
                     {unreadNotifs > 0 && (
                       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
