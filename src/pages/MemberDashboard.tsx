@@ -155,9 +155,7 @@ export default function MemberDashboard() {
 
   // Request browser notification permission
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
+    requestNotificationPermission();
   }, []);
 
   // Watch for new notifications and send browser notification
@@ -166,9 +164,7 @@ export default function MemberDashboard() {
     const unread = notifications.filter(n => !n.is_read);
     if (unread.length > prevNotifCountRef.current && prevNotifCountRef.current > 0) {
       const latest = unread[0];
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(latest.title, { body: latest.message, icon: "/favicon.ico" });
-      }
+      sendBrowserNotification(latest.title, latest.message);
     }
     prevNotifCountRef.current = unread.length;
   }, [notifications]);
