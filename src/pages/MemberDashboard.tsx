@@ -442,7 +442,7 @@ export default function MemberDashboard() {
               <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg font-bold truncate leading-tight">مرحباً، {profile?.name} 👋</h1>
+              <h1 className="text-sm sm:text-lg font-bold leading-tight">مرحباً، {profile?.name} 👋</h1>
               <div className="flex items-center gap-2 text-[11px] sm:text-sm text-muted-foreground">
                 <motion.span className="flex items-center gap-1" key={profile?.total_points}
                   initial={{ scale: 1.3, color: "hsl(var(--gold))" }} animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}>
