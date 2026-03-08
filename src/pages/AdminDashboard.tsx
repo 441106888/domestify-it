@@ -1518,9 +1518,7 @@ export default function AdminDashboard() {
                                     {task.status === "pending" && (
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditTask(task)}><Edit className="h-4 w-4 text-primary" /></Button>
                                     )}
-                                    {task.status !== "failed" && (
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                   </div>
                                 </div>
                               </div>
