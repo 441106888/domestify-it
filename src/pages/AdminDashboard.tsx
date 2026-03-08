@@ -906,8 +906,8 @@ export default function AdminDashboard() {
   // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
-      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
+      <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring" as const, stiffness: 200, damping: 20 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={profile?.avatar_url || undefined} />
