@@ -1,0 +1,1 @@
+UPDATE profiles SET total_points = 2.5, updated_at = now() WHERE name = 'azzoz270280';
