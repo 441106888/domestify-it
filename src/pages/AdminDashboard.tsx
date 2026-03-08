@@ -1472,12 +1472,12 @@ export default function AdminDashboard() {
                                     {isGrouped && assignee && <h3 className="font-bold">{assignee.name}</h3>}
                                   </div>
                                   {!isGrouped && task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-2 text-xs">
-                                    {!isGrouped && <Badge variant="outline"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>}
-                                    {!isGrouped && assignee && <Badge variant="secondary" className="font-bold text-sm">{assignee.name}</Badge>}
-                                    {!isGrouped && <Badge className="bg-primary/10 text-primary">{task.points} نقطة</Badge>}
-                                    {!isGrouped && !task.requires_proof && <Badge variant="outline">بدون إثبات</Badge>}
-                                    {task.points_awarded !== 0 && <Badge className={task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs">
+                                    {!isGrouped && <Badge variant="outline" className="text-[10px] sm:text-xs"><Clock className="h-3 w-3 ml-1" />{new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</Badge>}
+                                    {!isGrouped && assignee && <Badge variant="secondary" className="font-bold text-xs sm:text-sm">{assignee.name}</Badge>}
+                                    {!isGrouped && <Badge className="bg-primary/10 text-primary text-[10px] sm:text-xs">{task.points} نقطة</Badge>}
+                                    {!isGrouped && !task.requires_proof && <Badge variant="outline" className="text-[10px] sm:text-xs">بدون إثبات</Badge>}
+                                    {task.points_awarded !== 0 && <Badge className={`text-[10px] sm:text-xs ${task.points_awarded > 0 ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}`}>{task.points_awarded > 0 ? "+" : ""}{task.points_awarded}</Badge>}
                                   </div>
                                   {task.failure_reason && <p className="text-sm text-destructive mt-2 flex items-center gap-1"><XCircle className="h-4 w-4" /> {task.failure_reason}</p>}
                                   {task.rejection_reason && <p className="text-sm text-destructive mt-1 flex items-center gap-1">سبب الرفض: {task.rejection_reason}</p>}
