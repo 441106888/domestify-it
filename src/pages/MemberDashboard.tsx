@@ -284,7 +284,6 @@ export default function MemberDashboard() {
         body: {
           title: "مهمة مكتملة ✅",
           message: `${memberName} أكمل مهمة: "${task?.title || ""}"`,
-          exclude_user_id: user?.id,
         },
       }).catch(() => {});
 
