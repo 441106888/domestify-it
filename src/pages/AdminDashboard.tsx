@@ -123,6 +123,7 @@ export default function AdminDashboard() {
   const [deleteStep, setDeleteStep] = useState<"confirm" | "points">("confirm");
   // Admin is also member
   const [adminIsMember, setAdminIsMember] = useState(false);
+  const [reportFilter, setReportFilter] = useState<"today" | "week" | "month">("today");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
