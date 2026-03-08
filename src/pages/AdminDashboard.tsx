@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { sendNotification } from "@/lib/telegram";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -324,10 +325,8 @@ export default function AdminDashboard() {
         if (error) throw error;
         
         const memberName = members.find(m => m.id === memberId)?.name || "";
-        await supabase.from("notifications").insert({
-          user_id: memberId, title: "مهمة جديدة 📋",
-          message: `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`,
-        });
+        await sendNotification(memberId, "مهمة جديدة 📋",
+          `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`);
       }
       toast({ title: `تم إضافة المهمة لـ ${newTask.assigned_to.length} عضو بنجاح ✅` });
       setNewTask({ title: "", description: "", points: "", deadline: "", assigned_to: [], requires_proof: false });
@@ -360,10 +359,8 @@ export default function AdminDashboard() {
 
       // If reassigned, notify new member
       if (oldAssignee !== newAssignee && newAssignee) {
-        await supabase.from("notifications").insert({
-          user_id: newAssignee, title: "مهمة محولة إليك 🔄",
-          message: `تم تحويل مهمة "${editTask.title}" إليك`,
-        });
+        await sendNotification(newAssignee, "مهمة محولة إليك 🔄",
+          `تم تحويل مهمة "${editTask.title}" إليك`);
       }
 
       toast({ title: "تم تعديل المهمة بنجاح ✅" });
@@ -415,12 +412,10 @@ export default function AdminDashboard() {
         await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: pointsAwarded });
       }
 
-      await supabase.from("notifications").insert({
-        user_id: task.assigned_to!, title: "تمت الموافقة على مهمتك ✅",
-        message: pointsAwarded > 0
+      await sendNotification(task.assigned_to!, "تمت الموافقة على مهمتك ✅",
+        pointsAwarded > 0
           ? `تم قبول مهمة "${task.title}" وحصلت على ${pointsAwarded} نقطة!`
-          : `تم قبول مهمة "${task.title}" لكن لم تحصل على نقاط لأن التنفيذ كان بعد الموعد النهائي.`,
-      });
+          : `تم قبول مهمة "${task.title}" لكن لم تحصل على نقاط لأن التنفيذ كان بعد الموعد النهائي.`);
 
       toast({ title: pointsAwarded > 0 ? `تمت الموافقة ومنح ${pointsAwarded} نقطة ✅` : "تمت الموافقة بدون نقاط (تأخر التنفيذ)" });
       loadData();
@@ -447,10 +442,8 @@ export default function AdminDashboard() {
       } as any).eq("id", rejectingTask.id);
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: rejectingTask.assigned_to!, title: "تم رفض الإثبات ❌",
-        message: `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`,
-      });
+      await sendNotification(rejectingTask.assigned_to!, "تم رفض الإثبات ❌",
+        `تم رفض إثبات مهمة "${rejectingTask.title}". السبب: ${rejectionReason}`);
 
       toast({ title: "تم رفض الإثبات وإعادة المهمة للعضو" });
       setRejectingTask(null);
@@ -470,10 +463,8 @@ export default function AdminDashboard() {
         status: "deducted" as any, points_awarded: penalty, updated_at: new Date().toISOString(),
       }).eq("id", task.id);
       await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: penalty });
-      await supabase.from("notifications").insert({
-        user_id: task.assigned_to!, title: "تم خصم نقاط ⚠️",
-        message: `تم خصم ${task.points} نقطة بسبب عدم إتمام مهمة: ${task.title}`,
-      });
+      await sendNotification(task.assigned_to!, "تم خصم نقاط ⚠️",
+        `تم خصم ${task.points} نقطة بسبب عدم إتمام مهمة: ${task.title}`);
       toast({ title: "تم خصم النقاط" });
       loadData();
     } catch (error: any) {
@@ -488,10 +479,8 @@ export default function AdminDashboard() {
         assigned_to: newAssignee, status: "pending", failure_reason: null,
         points_awarded: 0, updated_at: new Date().toISOString(),
       }).eq("id", taskId);
-      await supabase.from("notifications").insert({
-        user_id: newAssignee, title: "مهمة محولة إليك 🔄",
-        message: `تم تحويل مهمة إليك`,
-      });
+      await sendNotification(newAssignee, "مهمة محولة إليك 🔄",
+        `تم تحويل مهمة إليك`);
       toast({ title: "تم تحويل المهمة بنجاح" });
       setReassignTaskId(null); setReassignTo("");
       loadData();
