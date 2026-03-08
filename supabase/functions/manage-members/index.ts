@@ -109,18 +109,26 @@ Deno.serve(async (req) => {
 
       await supabaseAdmin.from("profiles").upsert({ id: userId, name });
 
-      if (assignedRole === "member") {
-        await supabaseAdmin.from("members").upsert({
-          id: userId,
-          pin_code: "deprecated",
-          created_by: user.id,
-        });
-      }
+      // Always create members entry
+      await supabaseAdmin.from("members").upsert({
+        id: userId,
+        pin_code: "deprecated",
+        created_by: user.id,
+      });
 
+      // Assign the requested role
       await supabaseAdmin.from("user_roles").upsert({
         user_id: userId,
         role: assignedRole,
       });
+
+      // If creating admin, also assign member role automatically
+      if (assignedRole === "admin") {
+        await supabaseAdmin.from("user_roles").upsert({
+          user_id: userId,
+          role: "member",
+        });
+      }
 
       return new Response(JSON.stringify({ success: true, member_id: userId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
