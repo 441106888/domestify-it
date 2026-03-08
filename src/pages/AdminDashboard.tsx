@@ -1499,6 +1499,7 @@ export default function AdminDashboard() {
                                     <div className="flex gap-2 mt-3">
                                       <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting}>خصم النقاط</Button>
                                       <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>تحويل لآخر</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)}><Trash2 className="h-4 w-4 text-destructive" /> حذف</Button>
                                     </div>
                                   )}
 
