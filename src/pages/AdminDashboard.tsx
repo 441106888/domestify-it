@@ -1563,7 +1563,7 @@ export default function AdminDashboard() {
 
       {/* Reassign dialog */}
       <Dialog open={!!reassignTaskId} onOpenChange={() => setReassignTaskId(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>تحويل المهمة لعضو آخر</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={reassignTo} onChange={(e) => setReassignTo(e.target.value)}>
