@@ -641,7 +641,7 @@ export default function AdminDashboard() {
 
     return (
       <div className="min-h-screen bg-background overflow-y-auto">
-        <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+        <motion.header initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top">
           <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
             <Button variant="ghost" onClick={() => setSelectedMember(null)}><ArrowLeft className="h-5 w-5 ml-1" /> رجوع</Button>
             <div className="flex gap-2">
