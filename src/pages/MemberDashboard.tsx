@@ -422,39 +422,40 @@ export default function MemberDashboard() {
       <motion.header
         initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring" as const, stiffness: 200, damping: 20 }}
-        className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm safe-area-top"
+        className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm"
       >
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 max-w-3xl mx-auto gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary font-bold">{profile?.name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate">مرحباً، {profile?.name} 👋</h1>
-              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
+              <h1 className="text-sm sm:text-lg font-bold truncate leading-tight">مرحباً، {profile?.name} 👋</h1>
+              <div className="flex items-center gap-2 text-[11px] sm:text-sm text-muted-foreground">
                 <motion.span className="flex items-center gap-1" key={profile?.total_points}
                   initial={{ scale: 1.3, color: "hsl(var(--gold))" }} animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}>
-                  <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
+                  <Star className="h-3 w-3 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
                 </motion.span>
-                {myRank > 0 && <span>المركز #{myRank}</span>}
+                {myRank > 0 && <span>#{myRank}</span>}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
             {isAlsoAdmin && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-xs sm:text-sm px-2 sm:px-3">
-                <Shield className="h-4 w-4 ml-1" /> الأدمن
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="text-[10px] sm:text-sm px-1.5 sm:px-3 h-8 sm:h-9">
+                <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline mr-1">الأدمن</span>
               </Button>
             )}
             <Sheet onOpenChange={(open) => { if (open) markNotificationsRead(); }}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9">
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                   <AnimatePresence>
                     {unreadNotifs > 0 && (
                       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
                         {unreadNotifs}
                       </motion.span>
                     )}
@@ -510,7 +511,7 @@ export default function MemberDashboard() {
                       <CardContent className="p-3 space-y-2">
                         <p className="text-sm">فعّل إشعارات تلقرام لتصلك التنبيهات على جوالك مباشرة!</p>
                         <p className="text-xs text-muted-foreground">1. افتح البوت بالضغط على الزر أدناه</p>
-                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت (ما تحتاج تكتب البريد يدويًا)</p>
+                        <p className="text-xs text-muted-foreground">2. اضغط <span className="font-semibold">Start</span> داخل البوت</p>
                         <p className="text-xs text-muted-foreground">3. ستصلك رسالة تأكيد ✅</p>
                         <Button
                           variant="outline"
@@ -527,11 +528,11 @@ export default function MemberDashboard() {
                 </div>
               </SheetContent>
             </Sheet>
-            <Button variant="ghost" size="icon" onClick={openEditProfile} className="h-9 w-9">
-              <Edit className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={openEditProfile} className="h-8 w-8 sm:h-9 sm:w-9">
+              <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="h-9 w-9">
-              <LogOut className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 sm:h-9 sm:w-9">
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </div>
