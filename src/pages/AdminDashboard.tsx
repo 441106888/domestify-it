@@ -876,7 +876,7 @@ export default function AdminDashboard() {
             )}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10">
                   <Bell className="h-5 w-5" />
                   {(failedTasks.length + pendingReviewTasks.length) > 0 && (
                     <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
