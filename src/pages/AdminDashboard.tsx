@@ -319,7 +319,7 @@ export default function AdminDashboard() {
       for (const memberId of newTask.assigned_to) {
         const { error } = await supabase.from("tasks").insert({
           title: newTask.title, description: newTask.description || null,
-          points, deadline: newTask.deadline,
+          points, deadline: newTask.deadline + ":00+03:00",
           assigned_to: memberId, created_by: user!.id,
           requires_proof: newTask.requires_proof,
         } as any);
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
 
       const { error } = await supabase.from("tasks").update({
         title: editTask.title, description: editTask.description || null,
-        points, deadline: editTask.deadline,
+        points, deadline: editTask.deadline + ":00+03:00",
         assigned_to: newAssignee, updated_at: new Date().toISOString(),
         requires_proof: editTask.requires_proof,
       } as any).eq("id", editingTask.id);
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
       title: task.title,
       description: task.description || "",
       points: String(task.points),
-      deadline: task.deadline.slice(0, 16),
+      deadline: new Date(task.deadline).toLocaleString("sv-SE", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(" ", "T"),
       assigned_to: task.assigned_to || "",
       requires_proof: task.requires_proof,
     });
