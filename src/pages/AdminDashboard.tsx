@@ -318,14 +318,13 @@ export default function AdminDashboard() {
 
   const getTodayMin = () => {
     const now = new Date();
-    // Convert to Saudi time
+    // Convert to Saudi time - only restrict by date, not time
+    // Time validation happens on submit to allow free hour selection
     const saTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
     const y = saTime.getFullYear();
     const m = String(saTime.getMonth() + 1).padStart(2, "0");
     const d = String(saTime.getDate()).padStart(2, "0");
-    const h = String(saTime.getHours()).padStart(2, "0");
-    const min = String(saTime.getMinutes()).padStart(2, "0");
-    return `${y}-${m}-${d}T${h}:${min}`;
+    return `${y}-${m}-${d}T00:00`;
   };
 
   const addTask = async () => {
