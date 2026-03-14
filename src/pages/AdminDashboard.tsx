@@ -1258,17 +1258,19 @@ export default function AdminDashboard() {
                             </div>
                             {grantingTask?.id === task.id ? (
                               <div className="flex items-center gap-2 bg-background p-2 rounded-lg border">
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  max={task.points}
-                                  step="0.5"
-                                  placeholder={`الحد الأقصى ${task.points}`}
-                                  value={grantPoints}
-                                  onChange={e => setGrantPoints(e.target.value)}
-                                  className="h-8 text-sm w-24"
-                                />
-                                <Button size="sm" onClick={grantPointsToMember} disabled={submitting} className="text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90">
+                                <Select value={grantPoints} onValueChange={setGrantPoints}>
+                                  <SelectTrigger className="h-8 text-sm w-28">
+                                    <SelectValue placeholder="اختر النقاط" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: Math.floor(task.points / 0.5) }, (_, i) => (i + 1) * 0.5).map(val => (
+                                      <SelectItem key={val} value={String(val)}>
+                                        {val} {val === task.points ? "(كاملة)" : val === task.points / 2 ? "(نصف)" : ""}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button size="sm" onClick={grantPointsToMember} disabled={submitting || !grantPoints} className="text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90">
                                   <Star className="h-3.5 w-3.5" /> منح
                                 </Button>
                                 <Button size="sm" variant="ghost" onClick={() => { setGrantingTask(null); setGrantPoints(""); }} className="text-xs">
