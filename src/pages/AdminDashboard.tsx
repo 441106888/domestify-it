@@ -1555,9 +1555,35 @@ export default function AdminDashboard() {
                                   )}
 
                                   {task.status === "failed" && (
-                                    <div className="flex gap-2 mt-3">
-                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">خصم النقاط</Button>
-                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">تحويل لآخر</Button>
+                                    <div className="space-y-2 mt-3">
+                                      {grantingTask?.id === task.id ? (
+                                        <div className="flex items-center gap-2 bg-background p-2 rounded-lg border">
+                                          <Select value={grantPoints} onValueChange={setGrantPoints}>
+                                            <SelectTrigger className="h-8 text-sm w-28">
+                                              <SelectValue placeholder="اختر النقاط" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {Array.from({ length: Math.floor(task.points / 0.5) }, (_, i) => (i + 1) * 0.5).map(val => (
+                                                <SelectItem key={val} value={String(val)}>
+                                                  {val} {val === task.points ? "(كاملة)" : val === task.points / 2 ? "(نصف)" : ""}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <Button size="sm" onClick={grantPointsToMember} disabled={submitting || !grantPoints} className="text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90">
+                                            <Star className="h-3.5 w-3.5" /> منح
+                                          </Button>
+                                          <Button size="sm" variant="ghost" onClick={() => { setGrantingTask(null); setGrantPoints(""); }} className="text-xs">إلغاء</Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex gap-2 flex-wrap">
+                                          <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
+                                            <Star className="h-3.5 w-3.5" /> منح نقاط
+                                          </Button>
+                                          <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">خصم النقاط</Button>
+                                          <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">تحويل لآخر</Button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
 
