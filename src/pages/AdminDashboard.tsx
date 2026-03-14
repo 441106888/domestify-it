@@ -1279,11 +1279,9 @@ export default function AdminDashboard() {
                               </div>
                             ) : (
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {task.failure_reason && (
-                                  <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs w-full border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
+                                <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs w-full border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
                                     <Star className="h-3.5 w-3.5 flex-shrink-0" /> منح نقاط
                                   </Button>
-                                )}
                                 <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
                                   <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
                                 </Button>
@@ -1302,6 +1300,37 @@ export default function AdminDashboard() {
                   </Card>
                 </motion.div>
               )}
+
+              {overdueTasks.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                  <Card className="border-[hsl(var(--warning))]/50">
+                    <CardHeader className="pb-2 sm:pb-4"><CardTitle className="flex items-center gap-2 text-[hsl(var(--warning))] text-sm sm:text-base"><Clock className="h-4 w-4 sm:h-5 sm:w-5" /> مهام متأخرة ({overdueTasks.length})</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      {overdueTasks.map((task, i) => {
+                        const assignee = members.find(m => m.id === task.assigned_to);
+                        return (
+                          <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-[hsl(var(--warning))]/5 border border-[hsl(var(--warning))]/20 space-y-2">
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                              <p className="text-xs text-muted-foreground">الموعد: {new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">
+                                <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">
+                                <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
 
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 <Card>
@@ -1557,17 +1586,48 @@ export default function AdminDashboard() {
                                   )}
 
                                   {task.status === "failed" && (
-                                    <div className="flex gap-2 mt-3">
-                                      <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">خصم النقاط</Button>
-                                      <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">تحويل لآخر</Button>
+                                    <div className="space-y-2 mt-3">
+                                      {grantingTask?.id === task.id ? (
+                                        <div className="flex items-center gap-2 bg-background p-2 rounded-lg border">
+                                          <Select value={grantPoints} onValueChange={setGrantPoints}>
+                                            <SelectTrigger className="h-8 text-sm w-28">
+                                              <SelectValue placeholder="اختر النقاط" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {Array.from({ length: Math.floor(task.points / 0.5) }, (_, i) => (i + 1) * 0.5).map(val => (
+                                                <SelectItem key={val} value={String(val)}>
+                                                  {val} {val === task.points ? "(كاملة)" : val === task.points / 2 ? "(نصف)" : ""}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <Button size="sm" onClick={grantPointsToMember} disabled={submitting || !grantPoints} className="text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90">
+                                            <Star className="h-3.5 w-3.5" /> منح
+                                          </Button>
+                                          <Button size="sm" variant="ghost" onClick={() => { setGrantingTask(null); setGrantPoints(""); }} className="text-xs">إلغاء</Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex gap-2 flex-wrap">
+                                          <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
+                                            <Star className="h-3.5 w-3.5" /> منح نقاط
+                                          </Button>
+                                          <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">خصم النقاط</Button>
+                                          <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">تحويل لآخر</Button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
 
                                   {task.status === "pending" && (
-                                    <div className="flex gap-2 mt-3">
+                                    <div className="flex gap-2 mt-3 flex-wrap">
                                       <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
                                         <RefreshCw className="h-4 w-4" /> تحويل لعضو آخر
                                       </Button>
+                                      {isOverdue && (
+                                        <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">
+                                          <XCircle className="h-3.5 w-3.5" /> خصم النقاط
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
