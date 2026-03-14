@@ -1301,7 +1301,37 @@ export default function AdminDashboard() {
                 </motion.div>
               )}
 
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              {overdueTasks.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                  <Card className="border-[hsl(var(--warning))]/50">
+                    <CardHeader className="pb-2 sm:pb-4"><CardTitle className="flex items-center gap-2 text-[hsl(var(--warning))] text-sm sm:text-base"><Clock className="h-4 w-4 sm:h-5 sm:w-5" /> مهام متأخرة ({overdueTasks.length})</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      {overdueTasks.map((task, i) => {
+                        const assignee = members.find(m => m.id === task.assigned_to);
+                        return (
+                          <motion.div key={task.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" className="p-3 rounded-lg bg-[hsl(var(--warning))]/5 border border-[hsl(var(--warning))]/20 space-y-2">
+                            <div>
+                              <p className="font-bold text-sm sm:text-base">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
+                              <p className="text-xs text-muted-foreground">الموعد: {new Date(task.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}</p>
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">
+                                <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs">
+                                <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+
                 <Card>
                   <CardHeader><CardTitle>نسبة الإنجاز الكلية</CardTitle></CardHeader>
                   <CardContent>
