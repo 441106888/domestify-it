@@ -508,6 +508,32 @@ export default function AdminDashboard() {
     } finally { setSubmitting(false); }
   };
 
+  const grantPointsToMember = async () => {
+    if (!grantingTask) return;
+    const pts = parseFloat(grantPoints);
+    if (isNaN(pts) || pts <= 0 || pts > grantingTask.points) {
+      toast({ title: "خطأ", description: `يرجى إدخال قيمة بين 1 و ${grantingTask.points}`, variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await supabase.from("tasks").update({
+        status: "completed" as any,
+        points_awarded: pts,
+        updated_at: new Date().toISOString(),
+      }).eq("id", grantingTask.id);
+      await supabase.rpc("increment_points", { _user_id: grantingTask.assigned_to!, _amount: pts });
+      await sendNotification(grantingTask.assigned_to!, "تم منحك نقاط ⭐",
+        `منحك الأدمن ${pts} نقطة على مهمة "${grantingTask.title}" بعد مراجعة تبريرك.`);
+      toast({ title: `تم منح ${pts} نقطة بنجاح ✅` });
+      setGrantingTask(null);
+      setGrantPoints("");
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
   const reassignTask = async (taskId: string, newAssignee: string) => {
     setSubmitting(true);
     try {
