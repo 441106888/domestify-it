@@ -129,6 +129,8 @@ export default function AdminDashboard() {
   const [msgTo, setMsgTo] = useState<string[]>([]);
   const [msgText, setMsgText] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [grantingTask, setGrantingTask] = useState<Task | null>(null);
+  const [grantPoints, setGrantPoints] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
