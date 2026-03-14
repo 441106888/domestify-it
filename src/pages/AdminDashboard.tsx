@@ -129,6 +129,8 @@ export default function AdminDashboard() {
   const [msgTo, setMsgTo] = useState<string[]>([]);
   const [msgText, setMsgText] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [grantingTask, setGrantingTask] = useState<Task | null>(null);
+  const [grantPoints, setGrantPoints] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -500,6 +502,32 @@ export default function AdminDashboard() {
       await sendNotification(task.assigned_to!, "تم خصم نقاط ⚠️",
         `تم خصم ${task.points} نقطة بسبب عدم إتمام مهمة: ${task.title}`);
       toast({ title: "تم خصم النقاط" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const grantPointsToMember = async () => {
+    if (!grantingTask) return;
+    const pts = parseFloat(grantPoints);
+    if (isNaN(pts) || pts <= 0 || pts > grantingTask.points) {
+      toast({ title: "خطأ", description: `يرجى إدخال قيمة بين 1 و ${grantingTask.points}`, variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await supabase.from("tasks").update({
+        status: "completed" as any,
+        points_awarded: pts,
+        updated_at: new Date().toISOString(),
+      }).eq("id", grantingTask.id);
+      await supabase.rpc("increment_points", { _user_id: grantingTask.assigned_to!, _amount: pts });
+      await sendNotification(grantingTask.assigned_to!, "تم منحك نقاط ⭐",
+        `منحك الأدمن ${pts} نقطة على مهمة "${grantingTask.title}" بعد مراجعة تبريرك.`);
+      toast({ title: `تم منح ${pts} نقطة بنجاح ✅` });
+      setGrantingTask(null);
+      setGrantPoints("");
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -1227,17 +1255,43 @@ export default function AdminDashboard() {
                               <p className="text-xs sm:text-sm text-muted-foreground">{assignee?.name} • {task.points} نقطة</p>
                               {task.failure_reason && <p className="text-xs sm:text-sm text-destructive mt-1">السبب: {task.failure_reason}</p>}
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
-                                <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">
-                                <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20">
-                                <Trash2 className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> حذف
-                              </Button>
-                            </div>
+                            {grantingTask?.id === task.id ? (
+                              <div className="flex items-center gap-2 bg-background p-2 rounded-lg border">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max={task.points}
+                                  step="0.5"
+                                  placeholder={`الحد الأقصى ${task.points}`}
+                                  value={grantPoints}
+                                  onChange={e => setGrantPoints(e.target.value)}
+                                  className="h-8 text-sm w-24"
+                                />
+                                <Button size="sm" onClick={grantPointsToMember} disabled={submitting} className="text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90">
+                                  <Star className="h-3.5 w-3.5" /> منح
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setGrantingTask(null); setGrantPoints(""); }} className="text-xs">
+                                  إلغاء
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {task.failure_reason && (
+                                  <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs w-full border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
+                                    <Star className="h-3.5 w-3.5 flex-shrink-0" /> منح نقاط
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
+                                  <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }} className="text-[11px] sm:text-xs w-full">
+                                  <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" /> تحويل لآخر
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => initiateDeleteTask(task)} className="text-[11px] sm:text-xs w-full border border-destructive/20">
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> حذف
+                                </Button>
+                              </div>
+                            )}
                           </motion.div>
                         );
                       })}
