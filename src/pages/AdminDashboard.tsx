@@ -1588,10 +1588,15 @@ export default function AdminDashboard() {
                                   )}
 
                                   {task.status === "pending" && (
-                                    <div className="flex gap-2 mt-3">
+                                    <div className="flex gap-2 mt-3 flex-wrap">
                                       <Button size="sm" variant="outline" onClick={() => { setReassignTaskId(task.id); setReassignTo(""); }}>
                                         <RefreshCw className="h-4 w-4" /> تحويل لعضو آخر
                                       </Button>
+                                      {isOverdue && (
+                                        <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs">
+                                          <XCircle className="h-3.5 w-3.5" /> خصم النقاط
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
