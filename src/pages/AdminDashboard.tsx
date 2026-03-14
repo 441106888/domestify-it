@@ -1279,11 +1279,9 @@ export default function AdminDashboard() {
                               </div>
                             ) : (
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {task.failure_reason && (
-                                  <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs w-full border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
+                                <Button size="sm" variant="outline" onClick={() => { setGrantingTask(task); setGrantPoints(""); }} disabled={submitting} className="text-[11px] sm:text-xs w-full border-[hsl(var(--success))]/50 text-[hsl(var(--success))]">
                                     <Star className="h-3.5 w-3.5 flex-shrink-0" /> منح نقاط
                                   </Button>
-                                )}
                                 <Button size="sm" variant="destructive" onClick={() => deductPoints(task)} disabled={submitting} className="text-[11px] sm:text-xs w-full">
                                   <XCircle className="h-3.5 w-3.5 flex-shrink-0" /> خصم النقاط
                                 </Button>
