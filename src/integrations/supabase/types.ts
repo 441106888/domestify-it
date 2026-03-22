@@ -125,6 +125,7 @@ export type Database = {
           points_awarded: number | null
           proof_url: string | null
           rejection_reason: string | null
+          reminder_sent: boolean
           requires_proof: boolean
           status: string
           title: string
@@ -143,6 +144,7 @@ export type Database = {
           points_awarded?: number | null
           proof_url?: string | null
           rejection_reason?: string | null
+          reminder_sent?: boolean
           requires_proof?: boolean
           status?: string
           title: string
@@ -161,6 +163,7 @@ export type Database = {
           points_awarded?: number | null
           proof_url?: string | null
           rejection_reason?: string | null
+          reminder_sent?: boolean
           requires_proof?: boolean
           status?: string
           title?: string
