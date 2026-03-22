@@ -287,6 +287,16 @@ export default function MemberDashboard() {
         toast({ title: "⚠️ مهمة لم تُنفذ", description: `المهمة "${expiredTask.title}" انتهى وقتها. يرجى كتابة المبرر.`, variant: "destructive" });
       }
     }
+
+    // Load recurring tasks and daily logs
+    const { data: rtData } = await supabase.from("recurring_tasks").select("*").eq("assigned_to", user.id).eq("is_active", true);
+    setRecurringTasks((rtData || []) as any);
+
+    if (rtData && rtData.length > 0) {
+      const rtIds = rtData.map((r: any) => r.id);
+      const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
+      setDailyLogs((logsData || []) as any);
+    }
   };
 
   const handleProofUpload = async (file: File) => {
