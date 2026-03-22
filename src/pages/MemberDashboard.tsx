@@ -20,7 +20,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send, Edit
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send, Edit, Calendar, Lock
 } from "lucide-react";
 
 interface Task {
