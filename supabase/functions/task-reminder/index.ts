@@ -90,6 +90,8 @@ Deno.serve(async (req) => {
         const tgResult = await tgResponse.json();
         if (tgResult.ok) {
           reminded++;
+          // Mark reminder as sent to prevent duplicates
+          await supabaseAdmin.from("tasks").update({ reminder_sent: true }).eq("id", task.id);
           // Also insert in-app notification
           await supabaseAdmin.from("notifications").insert({
             user_id: task.assigned_to,
