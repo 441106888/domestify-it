@@ -299,7 +299,47 @@ export default function MemberDashboard() {
     }
   };
 
-  const handleProofUpload = async (file: File) => {
+  const completeDailyTask = async (recurringTaskId: string) => {
+    if (!user) return;
+    setSubmitting(true);
+    try {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+      // Check if log exists for today
+      const { data: existing } = await supabase
+        .from("daily_task_logs")
+        .select("*")
+        .eq("recurring_task_id", recurringTaskId)
+        .eq("task_date", today)
+        .maybeSingle();
+
+      if (existing?.completed) {
+        toast({ title: "تم تنفيذها مسبقاً ✅" });
+        setSubmitting(false);
+        return;
+      }
+
+      if (existing) {
+        await supabase.from("daily_task_logs").update({
+          completed: true,
+          completed_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("daily_task_logs").insert({
+          recurring_task_id: recurringTaskId,
+          task_date: today,
+          completed: true,
+          completed_at: new Date().toISOString(),
+        } as any);
+      }
+
+      toast({ title: "تم تسجيل تنفيذ المهمة ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+
     if (!proofTaskId || !user) return;
     setProofUploading(true);
     try {
