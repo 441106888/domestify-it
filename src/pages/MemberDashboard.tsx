@@ -154,6 +154,9 @@ export default function MemberDashboard() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [loadingEmail, setLoadingEmail] = useState(false);
+  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const openEditProfile = async () => {
     setShowEditProfile(true);
