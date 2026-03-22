@@ -39,6 +39,24 @@ interface Task {
   rejection_reason: string | null;
 }
 
+interface RecurringTask {
+  id: string;
+  title: string;
+  reminder_time: string;
+  deadline_time: string;
+  penalty_points: number;
+  reward_points: number;
+}
+
+interface DailyLog {
+  id: string;
+  recurring_task_id: string;
+  task_date: string;
+  completed: boolean;
+  completed_at: string | null;
+  penalty_applied: boolean;
+}
+
 interface Notification {
   id: string;
   title: string;
