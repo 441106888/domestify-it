@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
       .from("tasks")
       .select("id, title, deadline, assigned_to, points")
       .eq("status", "pending")
+      .eq("reminder_sent", false)
       .gte("deadline", reminderStart.toISOString())
       .lte("deadline", reminderEnd.toISOString());
 
