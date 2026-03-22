@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_task_logs: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string | null
+          deadline_checked: boolean
+          id: string
+          penalty_applied: boolean
+          recurring_task_id: string
+          reminder_sent: boolean
+          task_date: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          deadline_checked?: boolean
+          id?: string
+          penalty_applied?: boolean
+          recurring_task_id: string
+          reminder_sent?: boolean
+          task_date: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          deadline_checked?: boolean
+          id?: string
+          penalty_applied?: boolean
+          recurring_task_id?: string
+          reminder_sent?: boolean
+          task_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_task_logs_recurring_task_id_fkey"
+            columns: ["recurring_task_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string | null
@@ -110,6 +154,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      recurring_tasks: {
+        Row: {
+          assigned_to: string
+          created_at: string | null
+          created_by: string | null
+          deadline_time: string
+          description: string | null
+          id: string
+          is_active: boolean
+          penalty_points: number
+          reminder_time: string
+          reward_points: number
+          title: string
+        }
+        Insert: {
+          assigned_to: string
+          created_at?: string | null
+          created_by?: string | null
+          deadline_time: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          penalty_points?: number
+          reminder_time: string
+          reward_points?: number
+          title: string
+        }
+        Update: {
+          assigned_to?: string
+          created_at?: string | null
+          created_by?: string | null
+          deadline_time?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          penalty_points?: number
+          reminder_time?: string
+          reward_points?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
