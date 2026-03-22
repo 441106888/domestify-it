@@ -20,7 +20,7 @@ import {
 } from "recharts";
 import {
   LogOut, CheckCircle2, Clock, XCircle, AlertTriangle,
-  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send, Edit
+  Trophy, Crown, Medal, Award, Bell, Star, Timer, TrendingUp, Upload, Image as ImageIcon, Camera, Shield, Send, Edit, Calendar, Lock
 } from "lucide-react";
 
 interface Task {
@@ -37,6 +37,24 @@ interface Task {
   proof_url: string | null;
   requires_proof: boolean;
   rejection_reason: string | null;
+}
+
+interface RecurringTask {
+  id: string;
+  title: string;
+  reminder_time: string;
+  deadline_time: string;
+  penalty_points: number;
+  reward_points: number;
+}
+
+interface DailyLog {
+  id: string;
+  recurring_task_id: string;
+  task_date: string;
+  completed: boolean;
+  completed_at: string | null;
+  penalty_applied: boolean;
 }
 
 interface Notification {
@@ -136,6 +154,9 @@ export default function MemberDashboard() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [loadingEmail, setLoadingEmail] = useState(false);
+  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const openEditProfile = async () => {
     setShowEditProfile(true);
@@ -266,6 +287,56 @@ export default function MemberDashboard() {
         toast({ title: "⚠️ مهمة لم تُنفذ", description: `المهمة "${expiredTask.title}" انتهى وقتها. يرجى كتابة المبرر.`, variant: "destructive" });
       }
     }
+
+    // Load recurring tasks and daily logs
+    const { data: rtData } = await supabase.from("recurring_tasks").select("*").eq("assigned_to", user.id).eq("is_active", true);
+    setRecurringTasks((rtData || []) as any);
+
+    if (rtData && rtData.length > 0) {
+      const rtIds = rtData.map((r: any) => r.id);
+      const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
+      setDailyLogs((logsData || []) as any);
+    }
+  };
+
+  const completeDailyTask = async (recurringTaskId: string) => {
+    if (!user) return;
+    setSubmitting(true);
+    try {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+      // Check if log exists for today
+      const { data: existing } = await supabase
+        .from("daily_task_logs")
+        .select("*")
+        .eq("recurring_task_id", recurringTaskId)
+        .eq("task_date", today)
+        .maybeSingle();
+
+      if (existing?.completed) {
+        toast({ title: "تم تنفيذها مسبقاً ✅" });
+        setSubmitting(false);
+        return;
+      }
+
+      if (existing) {
+        await supabase.from("daily_task_logs").update({
+          completed: true,
+          completed_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("daily_task_logs").insert({
+          recurring_task_id: recurringTaskId,
+          task_date: today,
+          completed: true,
+          completed_at: new Date().toISOString(),
+        } as any);
+      }
+
+      toast({ title: "تم تسجيل تنفيذ المهمة ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
   };
 
   const handleProofUpload = async (file: File) => {
@@ -611,7 +682,104 @@ export default function MemberDashboard() {
           </Card>
         </motion.div>
 
-        {/* Pending tasks */}
+        {/* Daily recurring tasks with calendar */}
+        {recurringTasks.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            {recurringTasks.map(rt => {
+              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+              const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === today);
+              const isCompletedToday = todayLog?.completed || false;
+
+              // Calendar: generate days of current month
+              const year = calendarMonth.getFullYear();
+              const month = calendarMonth.getMonth();
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const firstDayOfWeek = new Date(year, month, 1).getDay();
+              const monthName = calendarMonth.toLocaleDateString("ar-SA", { month: "long", year: "numeric" });
+
+              const logsForTask = dailyLogs.filter(l => l.recurring_task_id === rt.id);
+
+              return (
+                <Card key={rt.id} className="overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Lock className="h-5 w-5 text-primary" /> {rt.title}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      تذكير: {rt.reminder_time} | موعد نهائي: {rt.deadline_time} | خصم: {rt.penalty_points} نقطة
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Today's action */}
+                    <div className="flex items-center gap-3">
+                      {isCompletedToday ? (
+                        <Badge className="bg-[hsl(var(--success))] text-white py-2 px-4 text-sm">
+                          <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ اليوم ✅
+                        </Badge>
+                      ) : (
+                        <Button onClick={() => completeDailyTask(rt.id)} disabled={submitting} className="flex-1">
+                          <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Calendar */}
+                    <div className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(new Date(year, month - 1))}>
+                          ←
+                        </Button>
+                        <span className="font-bold text-sm">{monthName}</span>
+                        <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(new Date(year, month + 1))}>
+                          →
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                        {["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"].map(d => (
+                          <div key={d} className="font-bold text-muted-foreground py-1">{d}</div>
+                        ))}
+                        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                          <div key={`empty-${i}`} />
+                        ))}
+                        {Array.from({ length: daysInMonth }).map((_, i) => {
+                          const day = i + 1;
+                          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                          const log = logsForTask.find(l => l.task_date === dateStr);
+                          const isToday = dateStr === today;
+                          const isPast = dateStr < today;
+
+                          let bgClass = "";
+                          if (log?.completed) {
+                            bgClass = "bg-[hsl(var(--success))] text-white";
+                          } else if (log?.penalty_applied) {
+                            bgClass = "bg-destructive text-white";
+                          } else if (isPast && !log) {
+                            bgClass = "text-muted-foreground";
+                          }
+
+                          return (
+                            <div
+                              key={day}
+                              className={`rounded-md py-1 text-xs font-medium ${bgClass} ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
+                            >
+                              {day}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-4 mt-3 text-xs text-muted-foreground justify-center">
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[hsl(var(--success))]" /> تم التنفيذ</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> خصم</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </motion.div>
+        )}
+
+
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
             <Clock className="h-5 w-5 text-[hsl(var(--warning))]" /> المهام المطلوبة ({pendingTasks.length})
