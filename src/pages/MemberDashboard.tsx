@@ -339,7 +339,7 @@ export default function MemberDashboard() {
     } finally { setSubmitting(false); }
   };
 
-
+  const handleProofUpload = async (file: File) => {
     if (!proofTaskId || !user) return;
     setProofUploading(true);
     try {
