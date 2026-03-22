@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.task-reminder]
 verify_jwt = false
+
+[functions.daily-task-check]
+verify_jwt = false
