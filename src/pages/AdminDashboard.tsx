@@ -599,6 +599,76 @@ export default function AdminDashboard() {
     } finally { setSubmitting(false); }
   };
 
+  // Admin unlock a daily task log day & refund points
+  const adminUnlockDay = async (logId: string, recurringTaskId: string, assignedTo: string, penaltyPoints: number) => {
+    setSubmitting(true);
+    try {
+      await supabase.from("daily_task_logs").update({
+        admin_opened: true,
+        deadline_checked: false,
+        penalty_applied: false,
+        completed: false,
+        completed_at: null,
+      } as any).eq("id", logId);
+
+      // Refund penalty points
+      await supabase.rpc("increment_points", { _user_id: assignedTo, _amount: penaltyPoints });
+
+      const memberName = members.find(m => m.id === assignedTo)?.name || "عضو";
+      await sendNotification(assignedTo, "تم فتح المهمة 🔓",
+        `الأدمن فتح لك المهمة اليومية. يمكنك الآن ضغط "تم التنفيذ".`);
+
+      toast({ title: "تم فتح اليوم وإرجاع النقاط ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Delete recurring task
+  const deleteRecurringTask = async (rtId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه المهمة اليومية؟")) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("recurring_tasks").update({ is_active: false }).eq("id", rtId);
+      toast({ title: "تم حذف المهمة اليومية ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Edit recurring task
+  const startEditRecurring = (rt: any) => {
+    setEditingRecurring(rt);
+    setEditRecurring({
+      title: rt.title,
+      start_time: rt.start_time?.substring(0, 5) || "",
+      reminder_time: rt.reminder_time.substring(0, 5),
+      deadline_time: rt.deadline_time.substring(0, 5),
+      penalty_points: String(rt.penalty_points),
+    });
+  };
+
+  const updateRecurringTask = async () => {
+    if (!editingRecurring) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("recurring_tasks").update({
+        title: editRecurring.title,
+        start_time: editRecurring.start_time || null,
+        reminder_time: editRecurring.reminder_time,
+        deadline_time: editRecurring.deadline_time,
+        penalty_points: parseFloat(editRecurring.penalty_points) || 2,
+      } as any).eq("id", editingRecurring.id);
+      toast({ title: "تم تعديل المهمة اليومية ✅" });
+      setEditingRecurring(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
   const reassignTask = async (taskId: string, newAssignee: string) => {
     setSubmitting(true);
     try {
