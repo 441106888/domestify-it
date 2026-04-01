@@ -1772,6 +1772,14 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                   )}
+
+                                  {(task.status === "completed" || task.status === "deducted") && canReverseDecision(task) && (
+                                    <div className="flex gap-2 mt-3">
+                                      <Button size="sm" variant="outline" onClick={() => reverseDecision(task)} disabled={submitting} className="text-[11px] sm:text-xs border-[hsl(var(--warning))]/50 text-[hsl(var(--warning))]">
+                                        <RefreshCw className="h-3.5 w-3.5" /> التراجع عن القرار
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0 sm:flex-row flex-col">
                                   <Badge className="text-[10px] sm:text-xs whitespace-nowrap" variant={task.status === "completed" ? "default" : isPendingReview ? "default" : task.status === "failed" ? "secondary" : task.status === "deducted" ? "destructive" : isOverdue ? "destructive" : "secondary"}>
