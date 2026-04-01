@@ -561,6 +561,7 @@ export default function AdminDashboard() {
       await supabase.from("tasks").update({
         status: "completed" as any,
         points_awarded: pts,
+        decision_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }).eq("id", grantingTask.id);
       await supabase.rpc("increment_points", { _user_id: grantingTask.assigned_to!, _amount: pts });
