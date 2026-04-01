@@ -139,7 +139,16 @@ export default function AdminDashboard() {
   }, [user, role, loading, navigate]);
 
   useEffect(() => {
-    if (user && role === "admin") loadData();
+    if (user && role === "admin") {
+      loadData();
+      // Real-time subscriptions for profiles (points updates) and tasks
+      const channel = supabase
+        .channel("admin-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => loadData())
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [user, role]);
 
   // Admin is always also a member
