@@ -440,6 +440,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from("tasks").update({
         status: "completed" as any,
         points_awarded: pointsAwarded,
+        decision_at: now.toISOString(),
         updated_at: now.toISOString(),
       }).eq("id", task.id);
       if (error) throw error;
@@ -458,6 +459,44 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally { setSubmitting(false); }
+  };
+
+  const reverseDecision = async (task: Task) => {
+    if (!confirm("هل أنت متأكد من التراجع عن القرار؟")) return;
+    setSubmitting(true);
+    try {
+      // Reverse points if any were awarded
+      if (task.points_awarded !== 0 && task.assigned_to) {
+        await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
+      }
+
+      const { error } = await supabase.from("tasks").update({
+        status: "pending" as any,
+        points_awarded: 0,
+        decision_at: null,
+        completed_at: null,
+        proof_url: null,
+        failure_reason: null,
+        updated_at: new Date().toISOString(),
+      } as any).eq("id", task.id);
+      if (error) throw error;
+
+      await sendNotification(task.assigned_to!, "تم التراجع عن قرار المهمة 🔄",
+        `تم التراجع عن قرار مهمة "${task.title}". يرجى إعادة تنفيذها.`);
+
+      toast({ title: "تم التراجع عن القرار ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const canReverseDecision = (task: Task) => {
+    if (!task.decision_at) return false;
+    const decisionTime = new Date(task.decision_at).getTime();
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (now - decisionTime) < oneDayMs;
   };
 
   const openRejectDialog = (task: Task) => {
