@@ -300,17 +300,69 @@ export default function MemberDashboard() {
     }
   };
 
+  // Get effective task date for a recurring task (handles cross-midnight)
+  const getEffectiveDate = (rt: RecurringTask) => {
+    const now = new Date();
+    const saFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+    const parts = saFormatter.formatToParts(now);
+    const saHour = parseInt(parts.find(p => p.type === "hour")!.value);
+    const saMinute = parseInt(parts.find(p => p.type === "minute")!.value);
+    const saTimeMinutes = saHour * 60 + saMinute;
+    const today = `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
+    
+    const [dlH, dlM] = rt.deadline_time.split(":").map(Number);
+    const deadlineMinutes = dlH * 60 + dlM;
+    const startMinutes = rt.start_time ? (() => { const [sH, sM] = rt.start_time.split(":").map(Number); return sH * 60 + sM; })() : 0;
+    const crossesMidnight = deadlineMinutes < startMinutes;
+    
+    if (crossesMidnight && saTimeMinutes < deadlineMinutes + 30) {
+      // We're in the early morning after midnight, task date is yesterday
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+    }
+    return today;
+  };
+
+  // Check if a recurring task is currently actionable (between start_time and deadline)
+  const isTaskActionable = (rt: RecurringTask) => {
+    const now = new Date();
+    const saFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+    const parts = saFormatter.formatToParts(now);
+    const saHour = parseInt(parts.find(p => p.type === "hour")!.value);
+    const saMinute = parseInt(parts.find(p => p.type === "minute")!.value);
+    const saTimeMinutes = saHour * 60 + saMinute;
+
+    const startMinutes = rt.start_time ? (() => { const [sH, sM] = rt.start_time.split(":").map(Number); return sH * 60 + sM; })() : 0;
+    const [dlH, dlM] = rt.deadline_time.split(":").map(Number);
+    const deadlineMinutes = dlH * 60 + dlM;
+    const crossesMidnight = deadlineMinutes < startMinutes;
+
+    if (crossesMidnight) {
+      // e.g., 21:30 to 02:30 - actionable if >= 21:30 OR < 02:30
+      return saTimeMinutes >= startMinutes || saTimeMinutes < deadlineMinutes;
+    } else {
+      return saTimeMinutes >= startMinutes && saTimeMinutes < deadlineMinutes;
+    }
+  };
+
   const completeDailyTask = async (recurringTaskId: string) => {
     if (!user) return;
     setSubmitting(true);
     try {
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
-      // Check if log exists for today
+      const rt = recurringTasks.find(r => r.id === recurringTaskId);
+      const effectiveDate = rt ? getEffectiveDate(rt) : new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+      
       const { data: existing } = await supabase
         .from("daily_task_logs")
         .select("*")
         .eq("recurring_task_id", recurringTaskId)
-        .eq("task_date", today)
+        .eq("task_date", effectiveDate)
         .maybeSingle();
 
       if (existing?.completed) {
@@ -327,7 +379,7 @@ export default function MemberDashboard() {
       } else {
         await supabase.from("daily_task_logs").insert({
           recurring_task_id: recurringTaskId,
-          task_date: today,
+          task_date: effectiveDate,
           completed: true,
           completed_at: new Date().toISOString(),
         } as any);
