@@ -1458,9 +1458,17 @@ export default function AdminDashboard() {
                         <Label className="text-sm mb-1 block">عنوان المهمة</Label>
                         {uniqueTaskTitles.length > 0 && (
                           <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
-                            value="" onChange={(e) => { if (e.target.value) setNewTask({ ...newTask, title: e.target.value }); }}>
+                            value="" onChange={(e) => {
+                              if (e.target.value) {
+                                const existingTask = tasks.find(t => t.title === e.target.value);
+                                setNewTask({ ...newTask, title: e.target.value, points: existingTask ? String(existingTask.points) : newTask.points });
+                              }
+                            }}>
                             <option value="">اختر من عناوين سابقة...</option>
-                            {uniqueTaskTitles.map((t, i) => <option key={i} value={t}>{t}</option>)}
+                            {uniqueTaskTitles.map((t, i) => {
+                              const taskWithTitle = tasks.find(tk => tk.title === t);
+                              return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                            })}
                           </select>
                         )}
                         <Input
