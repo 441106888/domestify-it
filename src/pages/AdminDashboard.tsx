@@ -537,7 +537,7 @@ export default function AdminDashboard() {
     try {
       const penalty = -task.points;
       await supabase.from("tasks").update({
-        status: "deducted" as any, points_awarded: penalty, updated_at: new Date().toISOString(),
+        status: "deducted" as any, points_awarded: penalty, decision_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq("id", task.id);
       await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: penalty });
       await sendNotification(task.assigned_to!, "تم خصم نقاط ⚠️",
