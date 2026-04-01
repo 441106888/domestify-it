@@ -42,6 +42,7 @@ interface Task {
 interface RecurringTask {
   id: string;
   title: string;
+  start_time: string | null;
   reminder_time: string;
   deadline_time: string;
   penalty_points: number;
