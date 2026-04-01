@@ -24,7 +24,7 @@ import {
 import {
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3, User,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send
+  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send, Lock
 } from "lucide-react";
 
 interface Member {
@@ -55,6 +55,7 @@ interface Task {
   proof_url: string | null;
   requires_proof: boolean;
   rejection_reason: string | null;
+  decision_at: string | null;
 }
 
 const SA_LOCALE_OPTS: Intl.DateTimeFormatOptions = {
@@ -132,13 +133,27 @@ export default function AdminDashboard() {
   const [sendingMsg, setSendingMsg] = useState(false);
   const [grantingTask, setGrantingTask] = useState<Task | null>(null);
   const [grantPoints, setGrantPoints] = useState("");
+  // Recurring tasks state
+  const [recurringTasks, setRecurringTasks] = useState<any[]>([]);
+  const [recurringLogs, setRecurringLogs] = useState<any[]>([]);
+  const [editingRecurring, setEditingRecurring] = useState<any | null>(null);
+  const [editRecurring, setEditRecurring] = useState({ title: "", start_time: "", reminder_time: "", deadline_time: "", penalty_points: "" });
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
   }, [user, role, loading, navigate]);
 
   useEffect(() => {
-    if (user && role === "admin") loadData();
+    if (user && role === "admin") {
+      loadData();
+      // Real-time subscriptions for profiles (points updates) and tasks
+      const channel = supabase
+        .channel("admin-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => loadData())
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [user, role]);
 
   // Admin is always also a member
@@ -165,6 +180,15 @@ export default function AdminDashboard() {
     
     const reasons = (tasksData || []).map((t: any) => t.rejection_reason).filter(Boolean);
     setRejectionReasons([...new Set(reasons)] as string[]);
+
+    // Load recurring tasks and their logs
+    const { data: rtData } = await supabase.from("recurring_tasks").select("*").eq("is_active", true);
+    setRecurringTasks(rtData || []);
+    if (rtData && rtData.length > 0) {
+      const rtIds = rtData.map((r: any) => r.id);
+      const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
+      setRecurringLogs(logsData || []);
+    }
   };
 
   const addMember = async () => {
@@ -440,6 +464,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from("tasks").update({
         status: "completed" as any,
         points_awarded: pointsAwarded,
+        decision_at: now.toISOString(),
         updated_at: now.toISOString(),
       }).eq("id", task.id);
       if (error) throw error;
@@ -458,6 +483,44 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally { setSubmitting(false); }
+  };
+
+  const reverseDecision = async (task: Task) => {
+    if (!confirm("هل أنت متأكد من التراجع عن القرار؟")) return;
+    setSubmitting(true);
+    try {
+      // Reverse points if any were awarded
+      if (task.points_awarded !== 0 && task.assigned_to) {
+        await supabase.rpc("increment_points", { _user_id: task.assigned_to, _amount: -task.points_awarded });
+      }
+
+      const { error } = await supabase.from("tasks").update({
+        status: "pending" as any,
+        points_awarded: 0,
+        decision_at: null,
+        completed_at: null,
+        proof_url: null,
+        failure_reason: null,
+        updated_at: new Date().toISOString(),
+      } as any).eq("id", task.id);
+      if (error) throw error;
+
+      await sendNotification(task.assigned_to!, "تم التراجع عن قرار المهمة 🔄",
+        `تم التراجع عن قرار مهمة "${task.title}". يرجى إعادة تنفيذها.`);
+
+      toast({ title: "تم التراجع عن القرار ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const canReverseDecision = (task: Task) => {
+    if (!task.decision_at) return false;
+    const decisionTime = new Date(task.decision_at).getTime();
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (now - decisionTime) < oneDayMs;
   };
 
   const openRejectDialog = (task: Task) => {
@@ -497,7 +560,7 @@ export default function AdminDashboard() {
     try {
       const penalty = -task.points;
       await supabase.from("tasks").update({
-        status: "deducted" as any, points_awarded: penalty, updated_at: new Date().toISOString(),
+        status: "deducted" as any, points_awarded: penalty, decision_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq("id", task.id);
       await supabase.rpc("increment_points", { _user_id: task.assigned_to!, _amount: penalty });
       await sendNotification(task.assigned_to!, "تم خصم نقاط ⚠️",
@@ -521,6 +584,7 @@ export default function AdminDashboard() {
       await supabase.from("tasks").update({
         status: "completed" as any,
         points_awarded: pts,
+        decision_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }).eq("id", grantingTask.id);
       await supabase.rpc("increment_points", { _user_id: grantingTask.assigned_to!, _amount: pts });
@@ -529,6 +593,76 @@ export default function AdminDashboard() {
       toast({ title: `تم منح ${pts} نقطة بنجاح ✅` });
       setGrantingTask(null);
       setGrantPoints("");
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Admin unlock a daily task log day & refund points
+  const adminUnlockDay = async (logId: string, recurringTaskId: string, assignedTo: string, penaltyPoints: number) => {
+    setSubmitting(true);
+    try {
+      await supabase.from("daily_task_logs").update({
+        admin_opened: true,
+        deadline_checked: false,
+        penalty_applied: false,
+        completed: false,
+        completed_at: null,
+      } as any).eq("id", logId);
+
+      // Refund penalty points
+      await supabase.rpc("increment_points", { _user_id: assignedTo, _amount: penaltyPoints });
+
+      const memberName = members.find(m => m.id === assignedTo)?.name || "عضو";
+      await sendNotification(assignedTo, "تم فتح المهمة 🔓",
+        `الأدمن فتح لك المهمة اليومية. يمكنك الآن ضغط "تم التنفيذ".`);
+
+      toast({ title: "تم فتح اليوم وإرجاع النقاط ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Delete recurring task
+  const deleteRecurringTask = async (rtId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه المهمة اليومية؟")) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("recurring_tasks").update({ is_active: false }).eq("id", rtId);
+      toast({ title: "تم حذف المهمة اليومية ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  // Edit recurring task
+  const startEditRecurring = (rt: any) => {
+    setEditingRecurring(rt);
+    setEditRecurring({
+      title: rt.title,
+      start_time: rt.start_time?.substring(0, 5) || "",
+      reminder_time: rt.reminder_time.substring(0, 5),
+      deadline_time: rt.deadline_time.substring(0, 5),
+      penalty_points: String(rt.penalty_points),
+    });
+  };
+
+  const updateRecurringTask = async () => {
+    if (!editingRecurring) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("recurring_tasks").update({
+        title: editRecurring.title,
+        start_time: editRecurring.start_time || null,
+        reminder_time: editRecurring.reminder_time,
+        deadline_time: editRecurring.deadline_time,
+        penalty_points: parseFloat(editRecurring.penalty_points) || 2,
+      } as any).eq("id", editingRecurring.id);
+      toast({ title: "تم تعديل المهمة اليومية ✅" });
+      setEditingRecurring(null);
       loadData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -1368,6 +1502,56 @@ export default function AdminDashboard() {
                   </Card>
                 </motion.div>
               )}
+
+              {/* Recurring Tasks Management */}
+              {recurringTasks.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+                  <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> المهام اليومية المتكررة</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      {recurringTasks.map((rt: any) => {
+                        const assignee = members.find(m => m.id === rt.assigned_to);
+                        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+                        const recentLogs = recurringLogs.filter((l: any) => l.recurring_task_id === rt.id).slice(0, 7);
+                        const penaltyLogs = recentLogs.filter((l: any) => l.penalty_applied && !l.completed);
+                        
+                        return (
+                          <div key={rt.id} className="p-3 rounded-lg border space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-bold">{rt.title}</p>
+                                <p className="text-xs text-muted-foreground">{assignee?.name} • بدء: {rt.start_time?.substring(0,5) || "--"} • تذكير: {rt.reminder_time.substring(0,5)} • موعد: {rt.deadline_time.substring(0,5)} • خصم: {rt.penalty_points}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditRecurring(rt)}>
+                                  <Edit className="h-4 w-4 text-primary" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteRecurringTask(rt.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                            {/* Show recent logs with unlock option */}
+                            {penaltyLogs.length > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-destructive">أيام تم خصمها:</p>
+                                {penaltyLogs.map((log: any) => (
+                                  <div key={log.id} className="flex items-center justify-between bg-destructive/5 rounded p-2">
+                                    <span className="text-xs">{log.task_date}</span>
+                                    <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => adminUnlockDay(log.id, rt.id, rt.assigned_to, rt.penalty_points)} disabled={submitting}>
+                                      🔓 فتح وإرجاع النقاط
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
@@ -1458,9 +1642,17 @@ export default function AdminDashboard() {
                         <Label className="text-sm mb-1 block">عنوان المهمة</Label>
                         {uniqueTaskTitles.length > 0 && (
                           <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
-                            value="" onChange={(e) => { if (e.target.value) setNewTask({ ...newTask, title: e.target.value }); }}>
+                            value="" onChange={(e) => {
+                              if (e.target.value) {
+                                const existingTask = tasks.find(t => t.title === e.target.value);
+                                setNewTask({ ...newTask, title: e.target.value, points: existingTask ? String(existingTask.points) : newTask.points });
+                              }
+                            }}>
                             <option value="">اختر من عناوين سابقة...</option>
-                            {uniqueTaskTitles.map((t, i) => <option key={i} value={t}>{t}</option>)}
+                            {uniqueTaskTitles.map((t, i) => {
+                              const taskWithTitle = tasks.find(tk => tk.title === t);
+                              return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                            })}
                           </select>
                         )}
                         <Input
@@ -1628,6 +1820,14 @@ export default function AdminDashboard() {
                                           <XCircle className="h-3.5 w-3.5" /> خصم النقاط
                                         </Button>
                                       )}
+                                    </div>
+                                  )}
+
+                                  {(task.status === "completed" || task.status === "deducted") && canReverseDecision(task) && (
+                                    <div className="flex gap-2 mt-3">
+                                      <Button size="sm" variant="outline" onClick={() => reverseDecision(task)} disabled={submitting} className="text-[11px] sm:text-xs border-[hsl(var(--warning))]/50 text-[hsl(var(--warning))]">
+                                        <RefreshCw className="h-3.5 w-3.5" /> التراجع عن القرار
+                                      </Button>
                                     </div>
                                   )}
                                 </div>
@@ -1970,9 +2170,17 @@ export default function AdminDashboard() {
               <Label className="text-sm mb-1 block">عنوان المهمة</Label>
               {uniqueTaskTitles.length > 0 && (
                 <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
-                  value="" onChange={(e) => { if (e.target.value) setEditTask({ ...editTask, title: e.target.value }); }}>
+                  value="" onChange={(e) => {
+                    if (e.target.value) {
+                      const existingTask = tasks.find(t => t.title === e.target.value);
+                      setEditTask({ ...editTask, title: e.target.value, points: existingTask ? String(existingTask.points) : editTask.points });
+                    }
+                  }}>
                   <option value="">اختر من عناوين سابقة...</option>
-                  {uniqueTaskTitles.map((t, i) => <option key={i} value={t}>{t}</option>)}
+                  {uniqueTaskTitles.map((t, i) => {
+                    const taskWithTitle = tasks.find(tk => tk.title === t);
+                    return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                  })}
                 </select>
               )}
               <Input placeholder="أو اكتب عنوان جديد" value={editTask.title} onChange={(e) => setEditTask({ ...editTask, title: e.target.value })} />
@@ -2144,6 +2352,38 @@ export default function AdminDashboard() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>عرض الإثبات</DialogTitle></DialogHeader>
           {proofPreview && <img src={proofPreview} alt="إثبات" className="w-full rounded-lg" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit recurring task dialog */}
+      <Dialog open={!!editingRecurring} onOpenChange={() => setEditingRecurring(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>تعديل المهمة اليومية</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm mb-1 block">العنوان</Label>
+              <Input value={editRecurring.title} onChange={(e) => setEditRecurring({ ...editRecurring, title: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">وقت البدء (فتح القفل)</Label>
+              <Input type="time" value={editRecurring.start_time} onChange={(e) => setEditRecurring({ ...editRecurring, start_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">وقت التذكير</Label>
+              <Input type="time" value={editRecurring.reminder_time} onChange={(e) => setEditRecurring({ ...editRecurring, reminder_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">الموعد النهائي</Label>
+              <Input type="time" value={editRecurring.deadline_time} onChange={(e) => setEditRecurring({ ...editRecurring, deadline_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">نقاط الخصم</Label>
+              <Input type="number" value={editRecurring.penalty_points} onChange={(e) => setEditRecurring({ ...editRecurring, penalty_points: e.target.value })} min={0} />
+            </div>
+            <Button onClick={updateRecurringTask} disabled={submitting} className="w-full">
+              {submitting ? "جاري التعديل..." : "حفظ التعديلات"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

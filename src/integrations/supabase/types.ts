@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       daily_task_logs: {
         Row: {
+          admin_opened: boolean
           completed: boolean
           completed_at: string | null
           created_at: string | null
@@ -27,6 +28,7 @@ export type Database = {
           task_date: string
         }
         Insert: {
+          admin_opened?: boolean
           completed?: boolean
           completed_at?: string | null
           created_at?: string | null
@@ -38,6 +40,7 @@ export type Database = {
           task_date: string
         }
         Update: {
+          admin_opened?: boolean
           completed?: boolean
           completed_at?: string | null
           created_at?: string | null
@@ -167,6 +170,7 @@ export type Database = {
           penalty_points: number
           reminder_time: string
           reward_points: number
+          start_time: string | null
           title: string
         }
         Insert: {
@@ -180,6 +184,7 @@ export type Database = {
           penalty_points?: number
           reminder_time: string
           reward_points?: number
+          start_time?: string | null
           title: string
         }
         Update: {
@@ -193,6 +198,7 @@ export type Database = {
           penalty_points?: number
           reminder_time?: string
           reward_points?: number
+          start_time?: string | null
           title?: string
         }
         Relationships: [
@@ -212,6 +218,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           deadline: string
+          decision_at: string | null
           description: string | null
           failure_reason: string | null
           id: string
@@ -231,6 +238,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deadline: string
+          decision_at?: string | null
           description?: string | null
           failure_reason?: string | null
           id?: string
@@ -250,6 +258,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deadline?: string
+          decision_at?: string | null
           description?: string | null
           failure_reason?: string | null
           id?: string

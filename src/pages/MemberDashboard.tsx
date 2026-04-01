@@ -42,6 +42,7 @@ interface Task {
 interface RecurringTask {
   id: string;
   title: string;
+  start_time: string | null;
   reminder_time: string;
   deadline_time: string;
   penalty_points: number;
@@ -299,17 +300,69 @@ export default function MemberDashboard() {
     }
   };
 
+  // Get effective task date for a recurring task (handles cross-midnight)
+  const getEffectiveDate = (rt: RecurringTask) => {
+    const now = new Date();
+    const saFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+    const parts = saFormatter.formatToParts(now);
+    const saHour = parseInt(parts.find(p => p.type === "hour")!.value);
+    const saMinute = parseInt(parts.find(p => p.type === "minute")!.value);
+    const saTimeMinutes = saHour * 60 + saMinute;
+    const today = `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
+    
+    const [dlH, dlM] = rt.deadline_time.split(":").map(Number);
+    const deadlineMinutes = dlH * 60 + dlM;
+    const startMinutes = rt.start_time ? (() => { const [sH, sM] = rt.start_time.split(":").map(Number); return sH * 60 + sM; })() : 0;
+    const crossesMidnight = deadlineMinutes < startMinutes;
+    
+    if (crossesMidnight && saTimeMinutes < deadlineMinutes + 30) {
+      // We're in the early morning after midnight, task date is yesterday
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+    }
+    return today;
+  };
+
+  // Check if a recurring task is currently actionable (between start_time and deadline)
+  const isTaskActionable = (rt: RecurringTask) => {
+    const now = new Date();
+    const saFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+    const parts = saFormatter.formatToParts(now);
+    const saHour = parseInt(parts.find(p => p.type === "hour")!.value);
+    const saMinute = parseInt(parts.find(p => p.type === "minute")!.value);
+    const saTimeMinutes = saHour * 60 + saMinute;
+
+    const startMinutes = rt.start_time ? (() => { const [sH, sM] = rt.start_time.split(":").map(Number); return sH * 60 + sM; })() : 0;
+    const [dlH, dlM] = rt.deadline_time.split(":").map(Number);
+    const deadlineMinutes = dlH * 60 + dlM;
+    const crossesMidnight = deadlineMinutes < startMinutes;
+
+    if (crossesMidnight) {
+      // e.g., 21:30 to 02:30 - actionable if >= 21:30 OR < 02:30
+      return saTimeMinutes >= startMinutes || saTimeMinutes < deadlineMinutes;
+    } else {
+      return saTimeMinutes >= startMinutes && saTimeMinutes < deadlineMinutes;
+    }
+  };
+
   const completeDailyTask = async (recurringTaskId: string) => {
     if (!user) return;
     setSubmitting(true);
     try {
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
-      // Check if log exists for today
+      const rt = recurringTasks.find(r => r.id === recurringTaskId);
+      const effectiveDate = rt ? getEffectiveDate(rt) : new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+      
       const { data: existing } = await supabase
         .from("daily_task_logs")
         .select("*")
         .eq("recurring_task_id", recurringTaskId)
-        .eq("task_date", today)
+        .eq("task_date", effectiveDate)
         .maybeSingle();
 
       if (existing?.completed) {
@@ -326,7 +379,7 @@ export default function MemberDashboard() {
       } else {
         await supabase.from("daily_task_logs").insert({
           recurring_task_id: recurringTaskId,
-          task_date: today,
+          task_date: effectiveDate,
           completed: true,
           completed_at: new Date().toISOString(),
         } as any);
@@ -686,9 +739,11 @@ export default function MemberDashboard() {
         {recurringTasks.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             {recurringTasks.map(rt => {
-              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
-              const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === today);
+              const effectiveDate = getEffectiveDate(rt);
+              const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === effectiveDate);
               const isCompletedToday = todayLog?.completed || false;
+              const actionable = isTaskActionable(rt);
+              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
 
               // Calendar: generate days of current month
               const year = calendarMonth.getFullYear();
@@ -706,7 +761,7 @@ export default function MemberDashboard() {
                       <Lock className="h-5 w-5 text-primary" /> {rt.title}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      تذكير: {rt.reminder_time} | موعد نهائي: {rt.deadline_time} | خصم: {rt.penalty_points} نقطة
+                      بدء: {rt.start_time?.substring(0, 5) || "--"} | تذكير: {rt.reminder_time.substring(0, 5)} | موعد نهائي: {rt.deadline_time.substring(0, 5)} | خصم: {rt.penalty_points} نقطة
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -714,12 +769,16 @@ export default function MemberDashboard() {
                     <div className="flex items-center gap-3">
                       {isCompletedToday ? (
                         <Badge className="bg-[hsl(var(--success))] text-white py-2 px-4 text-sm">
-                          <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ اليوم ✅
+                          <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ ✅
                         </Badge>
-                      ) : (
+                      ) : actionable ? (
                         <Button onClick={() => completeDailyTask(rt.id)} disabled={submitting} className="flex-1">
                           <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                         </Button>
+                      ) : (
+                        <Badge variant="secondary" className="py-2 px-4 text-sm flex items-center gap-1">
+                          <Lock className="h-4 w-4" /> مقفل حتى الساعة {rt.start_time?.substring(0, 5) || "--"}
+                        </Badge>
                       )}
                     </div>
 
@@ -746,6 +805,7 @@ export default function MemberDashboard() {
                           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                           const log = logsForTask.find(l => l.task_date === dateStr);
                           const isToday = dateStr === today;
+                          const isFuture = dateStr > today;
                           const isPast = dateStr < today;
 
                           let bgClass = "";
@@ -753,6 +813,14 @@ export default function MemberDashboard() {
                             bgClass = "bg-[hsl(var(--success))] text-white";
                           } else if (log?.penalty_applied) {
                             bgClass = "bg-destructive text-white";
+                          } else if (isFuture) {
+                            // Future dates show lock icon
+                            return (
+                              <div key={day} className={`rounded-md py-1 text-xs font-medium text-muted-foreground/50 flex flex-col items-center`}>
+                                <Lock className="h-2.5 w-2.5 mb-0.5" />
+                                <span>{day}</span>
+                              </div>
+                            );
                           } else if (isPast && !log) {
                             bgClass = "text-muted-foreground";
                           }
@@ -770,6 +838,7 @@ export default function MemberDashboard() {
                       <div className="flex gap-4 mt-3 text-xs text-muted-foreground justify-center">
                         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[hsl(var(--success))]" /> تم التنفيذ</span>
                         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> خصم</span>
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> مقفل</span>
                       </div>
                     </div>
                   </CardContent>
