@@ -24,7 +24,7 @@ import {
 import {
   LogOut, Plus, Users, ClipboardList, Trophy, BarChart3, User,
   Bell, Crown, Medal, Award, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send
+  Trash2, ArrowLeft, RefreshCw, Upload, Camera, Star, Edit, UserPlus, Shield, Image as ImageIcon, ShieldCheck, Send, Lock
 } from "lucide-react";
 
 interface Member {
