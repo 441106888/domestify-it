@@ -1502,6 +1502,56 @@ export default function AdminDashboard() {
                   </Card>
                 </motion.div>
               )}
+
+              {/* Recurring Tasks Management */}
+              {recurringTasks.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+                  <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> المهام اليومية المتكررة</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      {recurringTasks.map((rt: any) => {
+                        const assignee = members.find(m => m.id === rt.assigned_to);
+                        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+                        const recentLogs = recurringLogs.filter((l: any) => l.recurring_task_id === rt.id).slice(0, 7);
+                        const penaltyLogs = recentLogs.filter((l: any) => l.penalty_applied && !l.completed);
+                        
+                        return (
+                          <div key={rt.id} className="p-3 rounded-lg border space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-bold">{rt.title}</p>
+                                <p className="text-xs text-muted-foreground">{assignee?.name} • بدء: {rt.start_time?.substring(0,5) || "--"} • تذكير: {rt.reminder_time.substring(0,5)} • موعد: {rt.deadline_time.substring(0,5)} • خصم: {rt.penalty_points}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditRecurring(rt)}>
+                                  <Edit className="h-4 w-4 text-primary" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteRecurringTask(rt.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                            {/* Show recent logs with unlock option */}
+                            {penaltyLogs.length > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-destructive">أيام تم خصمها:</p>
+                                {penaltyLogs.map((log: any) => (
+                                  <div key={log.id} className="flex items-center justify-between bg-destructive/5 rounded p-2">
+                                    <span className="text-xs">{log.task_date}</span>
+                                    <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => adminUnlockDay(log.id, rt.id, rt.assigned_to, rt.penalty_points)} disabled={submitting}>
+                                      🔓 فتح وإرجاع النقاط
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
