@@ -180,6 +180,15 @@ export default function AdminDashboard() {
     
     const reasons = (tasksData || []).map((t: any) => t.rejection_reason).filter(Boolean);
     setRejectionReasons([...new Set(reasons)] as string[]);
+
+    // Load recurring tasks and their logs
+    const { data: rtData } = await supabase.from("recurring_tasks").select("*").eq("is_active", true);
+    setRecurringTasks(rtData || []);
+    if (rtData && rtData.length > 0) {
+      const rtIds = rtData.map((r: any) => r.id);
+      const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
+      setRecurringLogs(logsData || []);
+    }
   };
 
   const addMember = async () => {
