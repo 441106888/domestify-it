@@ -55,6 +55,7 @@ interface Task {
   proof_url: string | null;
   requires_proof: boolean;
   rejection_reason: string | null;
+  decision_at: string | null;
 }
 
 const SA_LOCALE_OPTS: Intl.DateTimeFormatOptions = {
