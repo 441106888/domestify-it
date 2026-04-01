@@ -2354,6 +2354,38 @@ export default function AdminDashboard() {
           {proofPreview && <img src={proofPreview} alt="إثبات" className="w-full rounded-lg" />}
         </DialogContent>
       </Dialog>
+
+      {/* Edit recurring task dialog */}
+      <Dialog open={!!editingRecurring} onOpenChange={() => setEditingRecurring(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>تعديل المهمة اليومية</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm mb-1 block">العنوان</Label>
+              <Input value={editRecurring.title} onChange={(e) => setEditRecurring({ ...editRecurring, title: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">وقت البدء (فتح القفل)</Label>
+              <Input type="time" value={editRecurring.start_time} onChange={(e) => setEditRecurring({ ...editRecurring, start_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">وقت التذكير</Label>
+              <Input type="time" value={editRecurring.reminder_time} onChange={(e) => setEditRecurring({ ...editRecurring, reminder_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">الموعد النهائي</Label>
+              <Input type="time" value={editRecurring.deadline_time} onChange={(e) => setEditRecurring({ ...editRecurring, deadline_time: e.target.value })} dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">نقاط الخصم</Label>
+              <Input type="number" value={editRecurring.penalty_points} onChange={(e) => setEditRecurring({ ...editRecurring, penalty_points: e.target.value })} min={0} />
+            </div>
+            <Button onClick={updateRecurringTask} disabled={submitting} className="w-full">
+              {submitting ? "جاري التعديل..." : "حفظ التعديلات"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
