@@ -133,6 +133,11 @@ export default function AdminDashboard() {
   const [sendingMsg, setSendingMsg] = useState(false);
   const [grantingTask, setGrantingTask] = useState<Task | null>(null);
   const [grantPoints, setGrantPoints] = useState("");
+  // Recurring tasks state
+  const [recurringTasks, setRecurringTasks] = useState<any[]>([]);
+  const [recurringLogs, setRecurringLogs] = useState<any[]>([]);
+  const [editingRecurring, setEditingRecurring] = useState<any | null>(null);
+  const [editRecurring, setEditRecurring] = useState({ title: "", start_time: "", reminder_time: "", deadline_time: "", penalty_points: "" });
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
