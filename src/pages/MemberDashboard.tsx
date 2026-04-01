@@ -739,9 +739,11 @@ export default function MemberDashboard() {
         {recurringTasks.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             {recurringTasks.map(rt => {
-              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
-              const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === today);
+              const effectiveDate = getEffectiveDate(rt);
+              const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === effectiveDate);
               const isCompletedToday = todayLog?.completed || false;
+              const actionable = isTaskActionable(rt);
+              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
 
               // Calendar: generate days of current month
               const year = calendarMonth.getFullYear();
@@ -759,7 +761,7 @@ export default function MemberDashboard() {
                       <Lock className="h-5 w-5 text-primary" /> {rt.title}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      تذكير: {rt.reminder_time} | موعد نهائي: {rt.deadline_time} | خصم: {rt.penalty_points} نقطة
+                      بدء: {rt.start_time?.substring(0, 5) || "--"} | تذكير: {rt.reminder_time.substring(0, 5)} | موعد نهائي: {rt.deadline_time.substring(0, 5)} | خصم: {rt.penalty_points} نقطة
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -767,12 +769,16 @@ export default function MemberDashboard() {
                     <div className="flex items-center gap-3">
                       {isCompletedToday ? (
                         <Badge className="bg-[hsl(var(--success))] text-white py-2 px-4 text-sm">
-                          <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ اليوم ✅
+                          <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ ✅
                         </Badge>
-                      ) : (
+                      ) : actionable ? (
                         <Button onClick={() => completeDailyTask(rt.id)} disabled={submitting} className="flex-1">
                           <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                         </Button>
+                      ) : (
+                        <Badge variant="secondary" className="py-2 px-4 text-sm flex items-center gap-1">
+                          <Lock className="h-4 w-4" /> مقفل حتى الساعة {rt.start_time?.substring(0, 5) || "--"}
+                        </Badge>
                       )}
                     </div>
 
@@ -799,6 +805,7 @@ export default function MemberDashboard() {
                           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                           const log = logsForTask.find(l => l.task_date === dateStr);
                           const isToday = dateStr === today;
+                          const isFuture = dateStr > today;
                           const isPast = dateStr < today;
 
                           let bgClass = "";
@@ -806,6 +813,14 @@ export default function MemberDashboard() {
                             bgClass = "bg-[hsl(var(--success))] text-white";
                           } else if (log?.penalty_applied) {
                             bgClass = "bg-destructive text-white";
+                          } else if (isFuture) {
+                            // Future dates show lock icon
+                            return (
+                              <div key={day} className={`rounded-md py-1 text-xs font-medium text-muted-foreground/50 flex flex-col items-center`}>
+                                <Lock className="h-2.5 w-2.5 mb-0.5" />
+                                <span>{day}</span>
+                              </div>
+                            );
                           } else if (isPast && !log) {
                             bgClass = "text-muted-foreground";
                           }
@@ -823,6 +838,7 @@ export default function MemberDashboard() {
                       <div className="flex gap-4 mt-3 text-xs text-muted-foreground justify-center">
                         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[hsl(var(--success))]" /> تم التنفيذ</span>
                         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> خصم</span>
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> مقفل</span>
                       </div>
                     </div>
                   </CardContent>
