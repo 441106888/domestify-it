@@ -159,6 +159,13 @@ export default function MemberDashboard() {
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
+  const formatSaudiDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const openEditProfile = async () => {
     setShowEditProfile(true);
     setEditName(profile?.name || "");
@@ -208,9 +215,12 @@ export default function MemberDashboard() {
     if (user) {
       loadData();
       const channel = supabase
-        .channel("member-tasks")
+        .channel(`member-dashboard-${user.id}`)
         .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter: `assigned_to=eq.${user.id}` }, () => loadData())
         .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => loadData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "daily_task_logs" }, () => loadData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "recurring_tasks" }, () => loadData())
         .subscribe();
       return () => { supabase.removeChannel(channel); };
     }
@@ -508,6 +518,7 @@ export default function MemberDashboard() {
   };
   const myIndex = leaderboard.findIndex(m => m.id === user?.id);
   const myRank = myIndex >= 0 ? getRank(myIndex) : 0;
+  const liveTotalPoints = leaderboard.find((member) => member.id === user?.id)?.total_points ?? profile?.total_points ?? 0;
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
@@ -570,7 +581,7 @@ export default function MemberDashboard() {
               <div className="flex items-center gap-2 text-[11px] sm:text-sm text-muted-foreground">
                 <motion.span className="flex items-center gap-1" key={profile?.total_points}
                   initial={{ scale: 1.3, color: "hsl(var(--gold))" }} animate={{ scale: 1, color: "hsl(var(--muted-foreground))" }}>
-                  <Star className="h-3 w-3 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {profile?.total_points || 0} نقطة
+                  <Star className="h-3 w-3 sm:h-4 sm:w-4 text-[hsl(var(--gold))]" /> {liveTotalPoints} نقطة
                 </motion.span>
                 {myRank > 0 && <span>#{myRank}</span>}
               </div>
@@ -743,7 +754,7 @@ export default function MemberDashboard() {
               const todayLog = dailyLogs.find(l => l.recurring_task_id === rt.id && l.task_date === effectiveDate);
               const isCompletedToday = todayLog?.completed || false;
               const actionable = isTaskActionable(rt);
-              const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+              const today = formatSaudiDate(new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Riyadh" })));
 
               // Calendar: generate days of current month
               const year = calendarMonth.getFullYear();
@@ -797,16 +808,23 @@ export default function MemberDashboard() {
                         {["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"].map(d => (
                           <div key={d} className="font-bold text-muted-foreground py-1">{d}</div>
                         ))}
-                        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                          <div key={`empty-${i}`} />
-                        ))}
-                        {Array.from({ length: daysInMonth }).map((_, i) => {
-                          const day = i + 1;
-                          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                        {Array.from({ length: 42 }).map((_, i) => {
+                          const cellDate = new Date(year, month, i - firstDayOfWeek + 1);
+                          const day = cellDate.getDate();
+                          const dateStr = formatSaudiDate(cellDate);
+                          const isCurrentMonth = cellDate.getMonth() === month;
                           const log = logsForTask.find(l => l.task_date === dateStr);
                           const isToday = dateStr === today;
                           const isFuture = dateStr > today;
                           const isPast = dateStr < today;
+
+                          if (!isCurrentMonth) {
+                            return (
+                              <div key={dateStr} className="rounded-md py-1 text-xs font-medium text-muted-foreground/30">
+                                {day}
+                              </div>
+                            );
+                          }
 
                           let bgClass = "";
                           if (log?.completed) {
@@ -814,9 +832,8 @@ export default function MemberDashboard() {
                           } else if (log?.penalty_applied) {
                             bgClass = "bg-destructive text-white";
                           } else if (isFuture) {
-                            // Future dates show lock icon
                             return (
-                              <div key={day} className={`rounded-md py-1 text-xs font-medium text-muted-foreground/50 flex flex-col items-center`}>
+                              <div key={dateStr} className="rounded-md py-1 text-xs font-medium text-muted-foreground/50 flex flex-col items-center min-h-9 justify-center">
                                 <Lock className="h-2.5 w-2.5 mb-0.5" />
                                 <span>{day}</span>
                               </div>
@@ -827,8 +844,8 @@ export default function MemberDashboard() {
 
                           return (
                             <div
-                              key={day}
-                              className={`rounded-md py-1 text-xs font-medium ${bgClass} ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
+                              key={dateStr}
+                              className={`rounded-md py-1 text-xs font-medium min-h-9 flex items-center justify-center ${bgClass} ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
                             >
                               {day}
                             </div>

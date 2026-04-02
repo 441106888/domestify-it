@@ -30,41 +30,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    let profileChannel: ReturnType<typeof supabase.channel> | null = null;
 
-      if (session?.user) {
-        setTimeout(async () => {
-          // Fetch all roles - prioritize admin if user has both
-          const { data: rolesData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id);
-          const roles = rolesData?.map(r => r.role) || [];
-          const primaryRole = roles.includes("admin") ? "admin" : roles.includes("member") ? "member" : null;
-          setRole(primaryRole as UserRole);
+    const loadUserState = async (userId: string) => {
+      const [{ data: rolesData }, { data: profileData }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("profiles").select("name, avatar_url, total_points").eq("id", userId).single(),
+      ]);
 
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("name, avatar_url, total_points")
-            .eq("id", session.user.id)
-            .single();
-          setProfile(profileData);
-          setLoading(false);
-        }, 0);
-      } else {
-        setRole(null);
-        setProfile(null);
-        setLoading(false);
+      const roles = rolesData?.map((r) => r.role) || [];
+      const primaryRole = roles.includes("admin") ? "admin" : roles.includes("member") ? "member" : null;
+      setRole(primaryRole as UserRole);
+      setProfile(profileData ?? null);
+      setLoading(false);
+    };
+
+    const subscribeToProfile = (userId: string) => {
+      if (profileChannel) {
+        supabase.removeChannel(profileChannel);
       }
+
+      profileChannel = supabase
+        .channel(`auth-profile-${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
+          async () => {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("name, avatar_url, total_points")
+              .eq("id", userId)
+              .single();
+            setProfile(profileData ?? null);
+          }
+        )
+        .subscribe();
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        setLoading(true);
+        await loadUserState(nextSession.user.id);
+        subscribeToProfile(nextSession.user.id);
+        return;
+      }
+
+      if (profileChannel) {
+        supabase.removeChannel(profileChannel);
+        profileChannel = null;
+      }
+
+      setRole(null);
+      setProfile(null);
+      setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setLoading(false);
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      if (!currentSession?.user) {
+        setLoading(false);
+        return;
+      }
+
+      setSession(currentSession);
+      setUser(currentSession.user);
+      await loadUserState(currentSession.user.id);
+      subscribeToProfile(currentSession.user.id);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (profileChannel) {
+        supabase.removeChannel(profileChannel);
+      }
+    };
   }, []);
 
   const signOut = async () => {
