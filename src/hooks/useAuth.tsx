@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let profileChannel: ReturnType<typeof supabase.channel> | null = null;
+    let mounted = true;
 
     const loadUserState = async (userId: string) => {
       const [{ data: rolesData }, { data: profileData }] = await Promise.all([
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from("profiles").select("name, avatar_url, total_points").eq("id", userId).single(),
       ]);
 
+      if (!mounted) return;
       const roles = rolesData?.map((r) => r.role) || [];
       const primaryRole = roles.includes("admin") ? "admin" : roles.includes("member") ? "member" : null;
       setRole(primaryRole as UserRole);
@@ -61,34 +63,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .select("name, avatar_url, total_points")
               .eq("id", userId)
               .single();
-            setProfile(profileData ?? null);
+            if (mounted) setProfile(profileData ?? null);
           }
         )
         .subscribe();
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        setLoading(true);
-        await loadUserState(nextSession.user.id);
+        // Fire-and-forget — never await inside onAuthStateChange
+        loadUserState(nextSession.user.id);
         subscribeToProfile(nextSession.user.id);
-        return;
+      } else {
+        if (profileChannel) {
+          supabase.removeChannel(profileChannel);
+          profileChannel = null;
+        }
+        setRole(null);
+        setProfile(null);
+        setLoading(false);
       }
-
-      if (profileChannel) {
-        supabase.removeChannel(profileChannel);
-        profileChannel = null;
-      }
-
-      setRole(null);
-      setProfile(null);
-      setLoading(false);
     });
 
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (!mounted) return;
       if (!currentSession?.user) {
         setLoading(false);
         return;
@@ -96,11 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(currentSession);
       setUser(currentSession.user);
-      await loadUserState(currentSession.user.id);
+      loadUserState(currentSession.user.id);
       subscribeToProfile(currentSession.user.id);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       if (profileChannel) {
         supabase.removeChannel(profileChannel);
