@@ -138,6 +138,12 @@ export default function AdminDashboard() {
   const [recurringLogs, setRecurringLogs] = useState<any[]>([]);
   const [editingRecurring, setEditingRecurring] = useState<any | null>(null);
   const [editRecurring, setEditRecurring] = useState({ title: "", start_time: "", reminder_time: "", deadline_time: "", penalty_points: "" });
+  // Saved task titles management
+  const [savedTitles, setSavedTitles] = useState<{ id: string; title: string; default_points: number }[]>([]);
+  const [showManageTitles, setShowManageTitles] = useState(false);
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editTitleText, setEditTitleText] = useState("");
+  const [editTitlePoints, setEditTitlePoints] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -189,6 +195,10 @@ export default function AdminDashboard() {
       const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
       setRecurringLogs(logsData || []);
     }
+
+    // Load saved task titles
+    const { data: titlesData } = await supabase.from("saved_task_titles").select("*").order("title");
+    setSavedTitles((titlesData || []) as any);
   };
 
   const addMember = async () => {
@@ -731,7 +741,35 @@ export default function AdminDashboard() {
     return index + 1;
   };
 
-  const uniqueTaskTitles = [...new Set(tasks.map(t => t.title))];
+  const uniqueTaskTitles = savedTitles.map(st => st.title);
+
+  const updateSavedTitle = async (id: string) => {
+    if (!editTitleText.trim()) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("saved_task_titles").update({
+        title: editTitleText.trim(),
+        default_points: parseFloat(editTitlePoints) || 5,
+      } as any).eq("id", id);
+      toast({ title: "تم تعديل العنوان ✅" });
+      setEditingTitleId(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const deleteSavedTitle = async (id: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا العنوان من القائمة؟")) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("saved_task_titles").delete().eq("id", id);
+      toast({ title: "تم حذف العنوان ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
@@ -1641,19 +1679,23 @@ export default function AdminDashboard() {
                       <div>
                         <Label className="text-sm mb-1 block">عنوان المهمة</Label>
                         {uniqueTaskTitles.length > 0 && (
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+                          <div className="flex gap-2 mb-2">
+                          <select className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value="" onChange={(e) => {
                               if (e.target.value) {
-                                const existingTask = tasks.find(t => t.title === e.target.value);
-                                setNewTask({ ...newTask, title: e.target.value, points: existingTask ? String(existingTask.points) : newTask.points });
+                                const saved = savedTitles.find(st => st.title === e.target.value);
+                                setNewTask({ ...newTask, title: e.target.value, points: saved ? String(saved.default_points) : newTask.points });
                               }
                             }}>
                             <option value="">اختر من عناوين سابقة...</option>
-                            {uniqueTaskTitles.map((t, i) => {
-                              const taskWithTitle = tasks.find(tk => tk.title === t);
-                              return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                            {savedTitles.map((st) => {
+                              return <option key={st.id} value={st.title}>{st.title} ({st.default_points} نقطة)</option>;
                             })}
                           </select>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setShowManageTitles(true)} className="text-xs whitespace-nowrap">
+                            <Edit className="h-3 w-3" /> إدارة
+                          </Button>
+                          </div>
                         )}
                         <Input
                           placeholder="أو اكتب عنوان جديد"
