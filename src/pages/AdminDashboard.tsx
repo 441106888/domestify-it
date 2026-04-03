@@ -138,6 +138,12 @@ export default function AdminDashboard() {
   const [recurringLogs, setRecurringLogs] = useState<any[]>([]);
   const [editingRecurring, setEditingRecurring] = useState<any | null>(null);
   const [editRecurring, setEditRecurring] = useState({ title: "", start_time: "", reminder_time: "", deadline_time: "", penalty_points: "" });
+  // Saved task titles management
+  const [savedTitles, setSavedTitles] = useState<{ id: string; title: string; default_points: number }[]>([]);
+  const [showManageTitles, setShowManageTitles] = useState(false);
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editTitleText, setEditTitleText] = useState("");
+  const [editTitlePoints, setEditTitlePoints] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || role !== "admin")) navigate("/");
@@ -189,6 +195,10 @@ export default function AdminDashboard() {
       const { data: logsData } = await supabase.from("daily_task_logs").select("*").in("recurring_task_id", rtIds).order("task_date", { ascending: false });
       setRecurringLogs(logsData || []);
     }
+
+    // Load saved task titles
+    const { data: titlesData } = await supabase.from("saved_task_titles").select("*").order("title");
+    setSavedTitles((titlesData || []) as any);
   };
 
   const addMember = async () => {
@@ -379,8 +389,15 @@ export default function AdminDashboard() {
           requires_proof: newTask.requires_proof,
         } as any);
         if (error) throw error;
+      }
+
+      // Auto-save title to saved_task_titles if new
+      if (!savedTitles.find(st => st.title === newTask.title)) {
+        await supabase.from("saved_task_titles").insert({ title: newTask.title, default_points: points } as any);
+      }
         
-        const memberName = members.find(m => m.id === memberId)?.name || "";
+      // Send notifications
+      for (const memberId of newTask.assigned_to) {
         await sendNotification(memberId, "مهمة جديدة 📋",
           `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`);
       }
@@ -731,7 +748,35 @@ export default function AdminDashboard() {
     return index + 1;
   };
 
-  const uniqueTaskTitles = [...new Set(tasks.map(t => t.title))];
+  const uniqueTaskTitles = savedTitles.map(st => st.title);
+
+  const updateSavedTitle = async (id: string) => {
+    if (!editTitleText.trim()) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("saved_task_titles").update({
+        title: editTitleText.trim(),
+        default_points: parseFloat(editTitlePoints) || 5,
+      } as any).eq("id", id);
+      toast({ title: "تم تعديل العنوان ✅" });
+      setEditingTitleId(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const deleteSavedTitle = async (id: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا العنوان من القائمة؟")) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("saved_task_titles").delete().eq("id", id);
+      toast({ title: "تم حذف العنوان ✅" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
 
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weekTasks = tasks.filter(t => new Date(t.created_at) >= weekAgo);
@@ -1641,19 +1686,23 @@ export default function AdminDashboard() {
                       <div>
                         <Label className="text-sm mb-1 block">عنوان المهمة</Label>
                         {uniqueTaskTitles.length > 0 && (
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+                          <div className="flex gap-2 mb-2">
+                          <select className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value="" onChange={(e) => {
                               if (e.target.value) {
-                                const existingTask = tasks.find(t => t.title === e.target.value);
-                                setNewTask({ ...newTask, title: e.target.value, points: existingTask ? String(existingTask.points) : newTask.points });
+                                const saved = savedTitles.find(st => st.title === e.target.value);
+                                setNewTask({ ...newTask, title: e.target.value, points: saved ? String(saved.default_points) : newTask.points });
                               }
                             }}>
                             <option value="">اختر من عناوين سابقة...</option>
-                            {uniqueTaskTitles.map((t, i) => {
-                              const taskWithTitle = tasks.find(tk => tk.title === t);
-                              return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                            {savedTitles.map((st) => {
+                              return <option key={st.id} value={st.title}>{st.title} ({st.default_points} نقطة)</option>;
                             })}
                           </select>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setShowManageTitles(true)} className="text-xs whitespace-nowrap">
+                            <Edit className="h-3 w-3" /> إدارة
+                          </Button>
+                          </div>
                         )}
                         <Input
                           placeholder="أو اكتب عنوان جديد"
@@ -2172,14 +2221,13 @@ export default function AdminDashboard() {
                 <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
                   value="" onChange={(e) => {
                     if (e.target.value) {
-                      const existingTask = tasks.find(t => t.title === e.target.value);
-                      setEditTask({ ...editTask, title: e.target.value, points: existingTask ? String(existingTask.points) : editTask.points });
+                      const saved = savedTitles.find(st => st.title === e.target.value);
+                      setEditTask({ ...editTask, title: e.target.value, points: saved ? String(saved.default_points) : editTask.points });
                     }
                   }}>
                   <option value="">اختر من عناوين سابقة...</option>
-                  {uniqueTaskTitles.map((t, i) => {
-                    const taskWithTitle = tasks.find(tk => tk.title === t);
-                    return <option key={i} value={t}>{t} {taskWithTitle ? `(${taskWithTitle.points} نقطة)` : ""}</option>;
+                  {savedTitles.map((st) => {
+                    return <option key={st.id} value={st.title}>{st.title} ({st.default_points} نقطة)</option>;
                   })}
                 </select>
               )}
@@ -2386,6 +2434,46 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manage saved task titles dialog */}
+      <Dialog open={showManageTitles} onOpenChange={setShowManageTitles}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>إدارة عناوين المهام</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            {savedTitles.map((st) => (
+              <div key={st.id} className="border rounded-lg p-3">
+                {editingTitleId === st.id ? (
+                  <div className="space-y-2">
+                    <Input value={editTitleText} onChange={(e) => setEditTitleText(e.target.value)} placeholder="العنوان" />
+                    <Input type="number" value={editTitlePoints} onChange={(e) => setEditTitlePoints(e.target.value)} placeholder="النقاط" min={1} />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => updateSavedTitle(st.id)} disabled={submitting}>حفظ</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingTitleId(null)}>إلغاء</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{st.title}</p>
+                      <p className="text-xs text-muted-foreground">{st.default_points} نقطة</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingTitleId(st.id); setEditTitleText(st.title); setEditTitlePoints(String(st.default_points)); }}>
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteSavedTitle(st.id)} disabled={submitting}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {savedTitles.length === 0 && <p className="text-center text-muted-foreground text-sm py-4">لا توجد عناوين محفوظة</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

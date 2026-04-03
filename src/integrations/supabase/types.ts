@@ -211,6 +211,27 @@ export type Database = {
           },
         ]
       }
+      saved_task_titles: {
+        Row: {
+          created_at: string | null
+          default_points: number
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_points?: number
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          default_points?: number
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
