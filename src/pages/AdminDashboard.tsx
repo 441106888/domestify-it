@@ -389,8 +389,15 @@ export default function AdminDashboard() {
           requires_proof: newTask.requires_proof,
         } as any);
         if (error) throw error;
+      }
+
+      // Auto-save title to saved_task_titles if new
+      if (!savedTitles.find(st => st.title === newTask.title)) {
+        await supabase.from("saved_task_titles").insert({ title: newTask.title, default_points: points } as any);
+      }
         
-        const memberName = members.find(m => m.id === memberId)?.name || "";
+      // Send notifications
+      for (const memberId of newTask.assigned_to) {
         await sendNotification(memberId, "مهمة جديدة 📋",
           `تم تكليفك بمهمة: ${newTask.title} - الموعد: ${new Date(newTask.deadline).toLocaleString("ar-SA", SA_LOCALE_OPTS)}`);
       }
