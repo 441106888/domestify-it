@@ -147,6 +147,8 @@ export default function MemberDashboard() {
   const [expiredPromptShown, setExpiredPromptShown] = useState(false);
   const [proofTaskId, setProofTaskId] = useState<string | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
+  const [confirmCompleteTaskId, setConfirmCompleteTaskId] = useState<string | null>(null);
+  const [confirmCompleteDailyId, setConfirmCompleteDailyId] = useState<string | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
