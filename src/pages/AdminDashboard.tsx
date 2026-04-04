@@ -1759,6 +1759,10 @@ export default function AdminDashboard() {
                     if (a.status === "pending_review" && b.status === "pending_review") {
                       return new Date(a.completed_at || 0).getTime() - new Date(b.completed_at || 0).getTime();
                     }
+                    // Completed/deducted tasks: newest first (closest to today)
+                    if ((a.status === "completed" || a.status === "deducted") && (b.status === "completed" || b.status === "deducted")) {
+                      return new Date(b.decision_at || b.completed_at || b.deadline).getTime() - new Date(a.decision_at || a.completed_at || a.deadline).getTime();
+                    }
                     return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
                   });
 
