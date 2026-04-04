@@ -1125,6 +1125,42 @@ export default function MemberDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Confirm complete task (no proof) */}
+      <Dialog open={!!confirmCompleteTaskId} onOpenChange={() => setConfirmCompleteTaskId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تأكيد تنفيذ المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">هل أنت متأكد أنك نفذت هذه المهمة؟</p>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => { completeTaskWithoutProof(confirmCompleteTaskId!); setConfirmCompleteTaskId(null); }} disabled={submitting}>
+                نعم، تم التنفيذ ✅
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmCompleteTaskId(null)}>
+                لا، إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm complete daily task */}
+      <Dialog open={!!confirmCompleteDailyId} onOpenChange={() => setConfirmCompleteDailyId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تأكيد تنفيذ المهمة اليومية</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">هل أنت متأكد أنك نفذت هذه المهمة؟</p>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => { completeDailyTask(confirmCompleteDailyId!); setConfirmCompleteDailyId(null); }} disabled={submitting}>
+                نعم، تم التنفيذ ✅
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmCompleteDailyId(null)}>
+                لا، إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Failure reason dialog */}
       <Dialog open={!!failureTaskId && !proofTaskId} onOpenChange={() => { setFailureTaskId(null); setFailureReason(""); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
