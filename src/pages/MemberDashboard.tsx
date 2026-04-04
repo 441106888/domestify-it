@@ -504,7 +504,7 @@ export default function MemberDashboard() {
 
   const pendingTasks = tasks.filter(t => t.status === "pending");
   const pendingReviewTasks = tasks.filter(t => t.status === "pending_review");
-  const completedTasks = tasks.filter(t => t.status === "completed");
+  const completedTasks = [...tasks.filter(t => t.status === "completed")].sort((a, b) => new Date(b.decision_at || b.completed_at || b.deadline).getTime() - new Date(a.decision_at || a.completed_at || a.deadline).getTime());
   const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
