@@ -786,7 +786,7 @@ export default function MemberDashboard() {
                           <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ ✅
                         </Badge>
                       ) : actionable ? (
-                        <Button onClick={() => completeDailyTask(rt.id)} disabled={submitting} className="flex-1">
+                        <Button onClick={() => setConfirmCompleteDailyId(rt.id)} disabled={submitting} className="flex-1">
                           <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                         </Button>
                       ) : (
