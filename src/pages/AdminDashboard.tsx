@@ -1680,7 +1680,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">المهام ({tasks.length})</h2>
                 <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> مهمة جديدة</Button></DialogTrigger>
-                  <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] max-w-lg sm:max-w-lg">
                     <DialogHeader><DialogTitle>إضافة مهمة جديدة</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
@@ -1758,6 +1758,10 @@ export default function AdminDashboard() {
                     if (oa !== ob) return oa - ob;
                     if (a.status === "pending_review" && b.status === "pending_review") {
                       return new Date(a.completed_at || 0).getTime() - new Date(b.completed_at || 0).getTime();
+                    }
+                    // Completed/deducted tasks: newest first (closest to today)
+                    if ((a.status === "completed" || a.status === "deducted") && (b.status === "completed" || b.status === "deducted")) {
+                      return new Date(b.decision_at || b.completed_at || b.deadline).getTime() - new Date(a.decision_at || a.completed_at || a.deadline).getTime();
                     }
                     return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
                   });

@@ -37,6 +37,7 @@ interface Task {
   proof_url: string | null;
   requires_proof: boolean;
   rejection_reason: string | null;
+  decision_at: string | null;
 }
 
 interface RecurringTask {
@@ -146,6 +147,8 @@ export default function MemberDashboard() {
   const [expiredPromptShown, setExpiredPromptShown] = useState(false);
   const [proofTaskId, setProofTaskId] = useState<string | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
+  const [confirmCompleteTaskId, setConfirmCompleteTaskId] = useState<string | null>(null);
+  const [confirmCompleteDailyId, setConfirmCompleteDailyId] = useState<string | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
@@ -504,7 +507,7 @@ export default function MemberDashboard() {
 
   const pendingTasks = tasks.filter(t => t.status === "pending");
   const pendingReviewTasks = tasks.filter(t => t.status === "pending_review");
-  const completedTasks = tasks.filter(t => t.status === "completed");
+  const completedTasks = [...tasks.filter(t => t.status === "completed")].sort((a, b) => new Date(b.decision_at || b.completed_at || b.deadline).getTime() - new Date(a.decision_at || a.completed_at || a.deadline).getTime());
   const failedTasks = tasks.filter(t => t.status === "failed");
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const unreadNotifs = notifications.filter(n => !n.is_read).length;
@@ -783,7 +786,7 @@ export default function MemberDashboard() {
                           <CheckCircle2 className="h-4 w-4 ml-1" /> تم التنفيذ ✅
                         </Badge>
                       ) : actionable ? (
-                        <Button onClick={() => completeDailyTask(rt.id)} disabled={submitting} className="flex-1">
+                        <Button onClick={() => setConfirmCompleteDailyId(rt.id)} disabled={submitting} className="flex-1">
                           <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                         </Button>
                       ) : (
@@ -814,8 +817,8 @@ export default function MemberDashboard() {
                           const dateStr = formatSaudiDate(cellDate);
                           const isCurrentMonth = cellDate.getMonth() === month;
                           const log = logsForTask.find(l => l.task_date === dateStr);
-                          const isToday = dateStr === today;
-                          const isFuture = dateStr > today;
+                          const isToday = dateStr === effectiveDate;
+                          const isFuture = dateStr > effectiveDate;
                           const isPast = dateStr < today;
 
                           if (!isCurrentMonth) {
@@ -905,7 +908,7 @@ export default function MemberDashboard() {
                                 <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                               </Button>
                             ) : (
-                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => setConfirmCompleteTaskId(task.id)} disabled={submitting}>
                                 <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                               </Button>
                             )}
@@ -1116,6 +1119,42 @@ export default function MemberDashboard() {
                     <Camera className="h-5 w-5" /> من الكاميرا
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm complete task (no proof) */}
+      <Dialog open={!!confirmCompleteTaskId} onOpenChange={() => setConfirmCompleteTaskId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تأكيد تنفيذ المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">هل أنت متأكد أنك نفذت هذه المهمة؟</p>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => { completeTaskWithoutProof(confirmCompleteTaskId!); setConfirmCompleteTaskId(null); }} disabled={submitting}>
+                نعم، تم التنفيذ ✅
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmCompleteTaskId(null)}>
+                لا، إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm complete daily task */}
+      <Dialog open={!!confirmCompleteDailyId} onOpenChange={() => setConfirmCompleteDailyId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تأكيد تنفيذ المهمة اليومية</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">هل أنت متأكد أنك نفذت هذه المهمة؟</p>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => { completeDailyTask(confirmCompleteDailyId!); setConfirmCompleteDailyId(null); }} disabled={submitting}>
+                نعم، تم التنفيذ ✅
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmCompleteDailyId(null)}>
+                لا، إلغاء
               </Button>
             </div>
           </div>
