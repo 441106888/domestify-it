@@ -1680,7 +1680,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">المهام ({tasks.length})</h2>
                 <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> مهمة جديدة</Button></DialogTrigger>
-                  <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] max-w-lg sm:max-w-lg overflow-x-hidden">
+                  <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] max-w-2xl overflow-x-hidden">
                     <DialogHeader><DialogTitle>إضافة مهمة جديدة</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
