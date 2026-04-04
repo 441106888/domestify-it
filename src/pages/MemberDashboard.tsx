@@ -37,6 +37,7 @@ interface Task {
   proof_url: string | null;
   requires_proof: boolean;
   rejection_reason: string | null;
+  decision_at: string | null;
 }
 
 interface RecurringTask {
