@@ -908,7 +908,7 @@ export default function MemberDashboard() {
                                 <Upload className="h-4 w-4" /> تم التنفيذ (أرفق إثبات)
                               </Button>
                             ) : (
-                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => completeTaskWithoutProof(task.id)} disabled={submitting}>
+                              <Button size="sm" className="w-full text-xs sm:text-sm" onClick={() => setConfirmCompleteTaskId(task.id)} disabled={submitting}>
                                 <CheckCircle2 className="h-4 w-4" /> تم التنفيذ
                               </Button>
                             )}
