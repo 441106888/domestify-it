@@ -817,8 +817,8 @@ export default function MemberDashboard() {
                           const dateStr = formatSaudiDate(cellDate);
                           const isCurrentMonth = cellDate.getMonth() === month;
                           const log = logsForTask.find(l => l.task_date === dateStr);
-                          const isToday = dateStr === today;
-                          const isFuture = dateStr > today;
+                          const isToday = dateStr === effectiveDate;
+                          const isFuture = dateStr > effectiveDate;
                           const isPast = dateStr < today;
 
                           if (!isCurrentMonth) {
